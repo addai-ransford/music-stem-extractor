@@ -50,5 +50,5 @@ def safe_zip_folder(folder_path: str, out_zip: str) -> str:
     # Create ZIP archive from folder
     shutil.make_archive(base, "zip", folder_path)
 
-    # Return path to the ZIP file
+    # Return  path to the ZIP file
     return base + ".zip"
