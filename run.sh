@@ -1,23 +1,31 @@
 #!/bin/bash
 # -----------------------------------------------------------------------------
 # Script Name: run.sh
-# Description: Safely run the FastAPI server with auto cleanup of data
-#              directory and stopping any process on the configured port.
+# Description: Safely run FastAPI backend and React Vite frontend with:
+#              - auto cleanup of backend data directory
+#              - stopping any process on backend or frontend ports
+#              - building and previewing the frontend
 # Author: Ransford Addai
 # Date: 2025-09-17
 # -----------------------------------------------------------------------------
 
+# ----------------- Configuration -----------------
 APP_MODULE="${APP_MODULE:-backend.mse.api.api:app}"
-PORT="${PORT:-8000}"
+BACKEND_PORT="${BACKEND_PORT:-8000}"
+FRONTEND_DIR="${FRONTEND_DIR:-frontend}"
+FRONTEND_PORT="${FRONTEND_PORT:-3000}"
 DATA_DIR="${DATA_DIR:-data}"
 HOST="${HOST:-0.0.0.0}"
 
-echo "Using APP_MODULE=$APP_MODULE, PORT=$PORT, DATA_DIR=$DATA_DIR"
+echo "Backend APP_MODULE=$APP_MODULE, PORT=$BACKEND_PORT, DATA_DIR=$DATA_DIR"
+echo "Frontend DIR=$FRONTEND_DIR, PORT=$FRONTEND_PORT"
 
+# ----------------- Functions -----------------
 stop_port() {
-    echo "Stopping any process on port $PORT..."
-    lsof -ti:"$PORT" | xargs -r kill
-    echo "Waiting for the port to be freed..."
+    local port=$1
+    echo "Stopping any process on port $port..."
+    lsof -ti:"$port" | xargs -r kill
+    echo "Waiting for port $port to be freed..."
     sleep 2
 }
 
@@ -31,15 +39,31 @@ clean_data_dir() {
     fi
 }
 
-start_server() {
-    echo "Starting FastAPI server..."
-    uvicorn "$APP_MODULE" --reload --host "$HOST" --port "$PORT"
+build_frontend() {
+    if [ -d "$FRONTEND_DIR" ]; then
+        echo "Building and previewing frontend..."
+        cd "$FRONTEND_DIR" || exit
+        npm install
+        stop_port "$FRONTEND_PORT"
+        npm run build
+        npm run preview &
+        cd - || exit
+    else
+        echo "Frontend directory $FRONTEND_DIR does not exist."
+    fi
 }
 
+start_backend() {
+    echo "Starting FastAPI backend..."
+    uvicorn "$APP_MODULE" --reload --host "$HOST" --port "$BACKEND_PORT"
+}
+
+# ----------------- Main -----------------
 main() {
-    stop_port
+    stop_port "$BACKEND_PORT"
     clean_data_dir
-    start_server
+    build_frontend
+    start_backend
 }
 
 # Execute main
