@@ -17,6 +17,8 @@ echo "Using APP_MODULE=$APP_MODULE, PORT=$PORT, DATA_DIR=$DATA_DIR"
 stop_port() {
     echo "Stopping any process on port $PORT..."
     lsof -ti:"$PORT" | xargs -r kill
+    echo "Waiting for the port to be freed..."
+    sleep 2
 }
 
 clean_data_dir() {
