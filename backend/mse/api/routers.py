@@ -20,3 +20,23 @@ feature_service = LibrosaFeatureExtractor()
 jobs = {}  # job_id -> {"status": str, "result": dict or None, "error": str or None, "pdf_path": str or None}
 connections = {}  # job_id -> list of WebSocket connections
 
+
+# ---------------- Helper functions ----------------
+async def send_safe(ws: WebSocket, message: dict):
+    try:
+        await ws.send_json(message)
+    except Exception:
+        pass
+
+
+def notify(job_id: str, message: dict):
+    if job_id in connections:
+        alive_connections = []
+        for ws in connections[job_id]:
+            try:
+                import asyncio
+                asyncio.run(send_safe(ws, message))
+                alive_connections.append(ws)
+            except Exception:
+                pass
+        connections[job_id] = alive_connections
