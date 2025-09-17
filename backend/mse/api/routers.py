@@ -90,3 +90,26 @@ def process_stems(job_id: str, stems: int, youtube_url: str = None, file_path: s
         jobs[job_id]["status"] = "error"
         jobs[job_id]["error"] = str(e)
         notify(job_id, {"status": "error", "error": str(e)})
+
+
+
+# ---------------- Endpoints ----------------
+@router.post("/process")
+async def process(background_tasks: BackgroundTasks, stems: int = Form(...), youtube_url: str = Form(None),
+                  file: UploadFile = File(None)):
+    if stems not in (2, 3, 4):
+        raise HTTPException(status_code=400, detail="stems must be 2, 3, or 4")
+    if youtube_url and file:
+        raise HTTPException(status_code=400, detail="Provide either youtube_url or file, not both")
+
+    job_id = str(uuid.uuid4())
+    jobs[job_id] = {"status": "queued", "result": None, "error": None, "pdf_path": None}
+
+    file_path = None
+    if file:
+        file_path = f"/tmp/{file.filename}"
+        with open(file_path, "wb") as f:
+            f.write(await file.read())
+
+    background_tasks.add_task(process_stems, job_id, stems, youtube_url, file_path)
+    return JSONResponse({"job_id": job_id})
