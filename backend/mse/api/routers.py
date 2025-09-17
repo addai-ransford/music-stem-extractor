@@ -92,6 +92,38 @@ def process_stems(job_id: str, stems: int, youtube_url: str = None, file_path: s
         notify(job_id, {"status": "error", "error": str(e)})
 
 
+# ---------------- Analyze PDF ----------------
+def analyze_pdf(job_id: str):
+    try:
+        job = jobs.get(job_id)
+        if not job or not job.get("result"):
+            raise ValueError("Stems not available yet")
+
+        stems_folder = job["result"]["stems_folder"]
+        instrumental = f"{stems_folder}/accompaniment.wav"
+        vocals = f"{stems_folder}/vocals.wav"
+
+        jobs[job_id]["status"] = "analyzing"
+        notify(job_id, {"status": "Generating PDF..."})
+
+        # Extract chords & solfège
+        chords = feature_service.extract_chords(instrumental)
+        melody = feature_service.extract_melody(vocals)
+
+        pdf_path = os.path.join(stems_folder, "analysis.pdf")
+        generate_pdf_analysis(pdf_path, chords, melody)
+
+        jobs[job_id]["pdf_path"] = pdf_path
+        jobs[job_id]["status"] = "pdf_done"
+
+        notify(job_id, {"status": "pdf_ready"})
+
+    except Exception as e:
+        jobs[job_id]["status"] = "error"
+        jobs[job_id]["error"] = str(e)
+        notify(job_id, {"status": "error", "error": str(e)})
+
+
 # ---------------- Endpoints ----------------
 @router.post("/process")
 async def process(background_tasks: BackgroundTasks, stems: int = Form(...), youtube_url: str = Form(None),
@@ -146,3 +178,25 @@ def download_stems(job_id: str):
     if not os.path.exists(zip_path):
         raise HTTPException(status_code=404, detail="File not found")
     return FileResponse(zip_path, media_type="application/zip", filename=os.path.basename(zip_path))
+
+
+
+@router.post("/analyze/{job_id}")
+async def generate_pdf(job_id: str, background_tasks: BackgroundTasks):
+    job = jobs.get(job_id)
+    if not job or not job.get("result"):
+        raise HTTPException(status_code=404, detail="Stems not available yet")
+
+    background_tasks.add_task(analyze_pdf, job_id)
+    return JSONResponse({"job_id": job_id, "status": "pdf_processing"})
+
+
+@router.get("/download/pdf/{job_id}")
+def download_pdf(job_id: str):
+    job = jobs.get(job_id)
+    if not job or not job.get("pdf_path"):
+        raise HTTPException(status_code=404, detail="PDF not generated yet")
+    pdf_path = job["pdf_path"]
+    if not os.path.exists(pdf_path):
+        raise HTTPException(status_code=404, detail="File not found")
+    return FileResponse(pdf_path, media_type="application/pdf", filename="analysis.pdf")
