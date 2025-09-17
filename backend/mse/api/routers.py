@@ -135,3 +135,14 @@ async def websocket_status(ws: WebSocket, job_id: str):
     except WebSocketDisconnect:
         if job_id in connections and ws in connections[job_id]:
             connections[job_id].remove(ws)
+
+
+@router.get("/download/stems/{job_id}")
+def download_stems(job_id: str):
+    job = jobs.get(job_id)
+    if not job or not job.get("result"):
+        raise HTTPException(status_code=404, detail="Stems not found")
+    zip_path = job["result"]["stems_zip"]
+    if not os.path.exists(zip_path):
+        raise HTTPException(status_code=404, detail="File not found")
+    return FileResponse(zip_path, media_type="application/zip", filename=os.path.basename(zip_path))
