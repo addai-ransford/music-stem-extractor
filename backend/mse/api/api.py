@@ -1,9 +1,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from backend.mse.api import routers
 
 app = FastAPI(title="Music Stem Extractor API")
 
-# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -12,4 +12,4 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
+app.include_router(routers.router)
