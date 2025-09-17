@@ -1,5 +1,10 @@
 # 🎶 Music Stem Extractor
- This software is built to help musicians, producers, and learners to **split, analyze, and visualize music** in seconds.  
+
+This software is built to help musicians, producers, and learners **split, analyze, and visualize music** in seconds.  
+
+---
+
+## 🚀 Overview
 
 This service allows you to:  
 - 🎤 **Extract stems** (vocals, accompaniment, bass, drums — choose 2/3/4 stems)  
@@ -12,6 +17,7 @@ This service allows you to:
 ---
 
 ## ✨ Features
+
 - ✅ Multi-stem separation powered by [Spleeter](https://github.com/deezer/spleeter)  
 - ✅ Chord detection & melody extraction with [Librosa](https://librosa.org/)  
 - ✅ Key detection using chroma profiles  
@@ -20,13 +26,40 @@ This service allows you to:
 - ✅ Backend: **FastAPI** for scalable, production-ready APIs  
 - ✅ File upload or YouTube URL input  
 - ✅ Choice of 2, 3, or 4 stems  
+- ✅ Real-time job status updates via WebSockets  
+- ✅ Download results as ZIP and PDF reports  
 
 ---
 
 ## 🛠️ Tech Stack
+
 - **Frontend:** React, TailwindCSS, shadcn/ui  
 - **Backend:** FastAPI, Python  
 - **Audio Processing:** Spleeter, Librosa, NumPy  
 - **Video/Audio Utils:** FFmpeg, yt-dlp  
 - **Deployment:** Docker  
 
+---
+
+## ⚡ Quick Start
+
+### Backend
+
+```bash
+
+cd backend
+pip install -r requirements.txt
+chmod +x run.sh && ./run.sh
+
+```
+
+📄 Usage
+
+- Choose Upload to send a local audio/video file, or YouTube to process a link.
+- Select the number of stems (2/3/4).
+- Click Process.
+- Wait for the job status to show done.
+- Download stems ZIP or analysis PDF.
+
+
+Runs on http://localhost:3000
