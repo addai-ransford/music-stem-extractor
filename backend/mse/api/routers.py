@@ -92,7 +92,6 @@ def process_stems(job_id: str, stems: int, youtube_url: str = None, file_path: s
         notify(job_id, {"status": "error", "error": str(e)})
 
 
-
 # ---------------- Endpoints ----------------
 @router.post("/process")
 async def process(background_tasks: BackgroundTasks, stems: int = Form(...), youtube_url: str = Form(None),
@@ -113,3 +112,26 @@ async def process(background_tasks: BackgroundTasks, stems: int = Form(...), you
 
     background_tasks.add_task(process_stems, job_id, stems, youtube_url, file_path)
     return JSONResponse({"job_id": job_id})
+
+
+@router.websocket("/ws/status/{job_id}")
+async def websocket_status(ws: WebSocket, job_id: str):
+    await ws.accept()
+    if job_id not in connections:
+        connections[job_id] = []
+    connections[job_id].append(ws)
+
+    if job_id in jobs:
+        await ws.send_json({
+            "status": jobs[job_id]["status"],
+            "result": jobs[job_id]["result"],
+            "pdf_path": jobs[job_id]["pdf_path"],
+            "error": jobs[job_id]["error"]
+        })
+
+    try:
+        while True:
+            await ws.receive_text()
+    except WebSocketDisconnect:
+        if job_id in connections and ws in connections[job_id]:
+            connections[job_id].remove(ws)
