@@ -240,29 +240,37 @@ export default function ResultDisplay({ jobId, onStatusChange }: ResultDisplayPr
               <strong>{detectedKey}</strong>
             </div>
           )}
-          <p className="results-copy">Download the stems you need, or grab the full collection as a ZIP archive.</p>
-          <div className="stem-list" aria-busy={filesLoading}>
+          <div className="track-session-heading">
+            <div><p className="eyebrow">YOUR SESSION</p><p className="results-copy">Your track has been separated. Preview each layer below, then download the stems you want.</p></div>
+            <span className="session-ready"><span aria-hidden="true">●</span> Ready</span>
+          </div>
+          <div className="stem-mixer" aria-busy={filesLoading}>
+            <div className="mixer-header"><span>TRACK</span><span>PREVIEW & EXPORT</span></div>
             {filesLoading && <p className="muted-message" role="status">Loading your WAV files…</p>}
             {!filesLoading && stemFiles.length === 0 && (
               <p className="muted-message" role="status">{error || "No individual stem files were returned. You can try the full ZIP archive."}</p>
             )}
-            {stemFiles.map((stem) => {
+            {stemFiles.map((stem, index) => {
               const downloadUrl = getStemDownloadUrl(stem.url);
+              const stemName = stem.name.replace(/\.wav$/i, "").replace(/[_-]/g, " ");
+              const trackStyle = ["vocal", "drums", "bass", "other", "piano"][index % 5];
               return (
-                <div className="stem-download" key={stem.name}>
-                  <span className="stem-file-icon" aria-hidden="true">♫</span>
-                  <span className="stem-file-info">
-                    <strong>{stem.name.replace(/\.wav$/i, "").replace(/[_-]/g, " ")}</strong>
-                    <small>WAV audio file</small>
-                  </span>
-                  {downloadUrl ? (
-                    <a className="stem-download-action" href={downloadUrl} download={stem.name} aria-label={`Download ${stem.name}`}>
-                      Download <span aria-hidden="true">↓</span>
-                    </a>
-                  ) : (
-                    <span className="stem-download-action" aria-label="Download unavailable">Unavailable</span>
-                  )}
-                </div>
+                <article className={`mixer-track track-${trackStyle}`} key={stem.name}>
+                  <div className="mixer-track-identity">
+                    <span className="track-color-mark" aria-hidden="true"><span /></span>
+                    <div className="stem-file-info"><strong>{stemName}</strong><small>WAV · Individual stem</small></div>
+                  </div>
+                  <div className="mixer-track-actions">
+                    {downloadUrl ? (
+                      <>
+                        <audio className="stem-audio" controls preload="none" src={downloadUrl} aria-label={`Preview ${stemName}`}>
+                          Your browser does not support audio playback.
+                        </audio>
+                        <a className="stem-download-action" href={downloadUrl} download={stem.name} aria-label={`Download ${stem.name}`} title="Download stem">↓</a>
+                      </>
+                    ) : <span className="stem-download-action" aria-label="Download unavailable">Unavailable</span>}
+                  </div>
+                </article>
               );
             })}
           </div>
