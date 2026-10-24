@@ -1,4 +1,5 @@
 import os
+import shutil
 import tempfile
 import uuid
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException, WebSocket, WebSocketDisconnect, BackgroundTasks
@@ -69,11 +70,25 @@ def process_stems(job_id: str, stems: int, youtube_url: str = None, file_path: s
         notify(job_id, {"status": "Extracting stems..."})
         stems_folder = stem_service.extract(audio_file, stems)
 
+        # Keep a private copy of the original mix for playback and chord analysis.
+        original_audio = os.path.join(stems_folder, "original_audio" + os.path.splitext(audio_file)[1].lower())
+        if os.path.abspath(audio_file) != os.path.abspath(original_audio):
+            shutil.copy2(audio_file, original_audio)
+
         # Step 3: Detect key (always fast)
         jobs[job_id]["status"] = "key"
         notify(job_id, {"status": "Detecting key..."})
         instrumental = build_instrumental(stems_folder, stems)
         key = feature_service.detect_key(instrumental)
+
+        # Detect chords from the original full mix (not separated accompaniment).
+        jobs[job_id]["status"] = "chords"
+        notify(job_id, {"status": "Detecting chords from the full song..."})
+        try:
+            chords = feature_service.extract_chords(original_audio)
+        except Exception as chord_error:
+            chords = []
+            jobs[job_id]["chords_error"] = str(chord_error)
 
         # Zip stems
         jobs[job_id]["status"] = "zipping"
@@ -87,7 +102,9 @@ def process_stems(job_id: str, stems: int, youtube_url: str = None, file_path: s
             "stems_zip": zip_file,
             "key": key,
             "stems_folder": stems_folder,
-            "instrumental": instrumental
+            "instrumental": instrumental,
+            "original_audio": original_audio,
+            "chords": chords
         }
         jobs[job_id]["pdf_path"] = None
         notify(job_id, {"status": "done", "result": jobs[job_id]["result"]})
@@ -120,7 +137,8 @@ def analyze_pdf(job_id: str):
         notify(job_id, {"status": "Generating PDF..."})
 
         # Extract chords & solfège
-        chords = feature_service.extract_chords(instrumental)
+        original_audio = job["result"].get("original_audio", instrumental)
+        chords = feature_service.extract_chords(original_audio)
         melody = feature_service.extract_melody(vocals)
 
         pdf_path = os.path.join(stems_folder, "analysis.pdf")
@@ -206,6 +224,31 @@ async def websocket_status(ws: WebSocket, job_id: str):
     except WebSocketDisconnect:
         if job_id in connections and ws in connections[job_id]:
             connections[job_id].remove(ws)
+
+
+@router.get("/audio/{job_id}")
+def get_original_audio(job_id: str):
+    """Stream the preserved original mix used for chord detection."""
+    job = jobs.get(job_id)
+    if not job or not job.get("result"):
+        raise HTTPException(status_code=404, detail="Audio not found")
+    audio_path = job["result"].get("original_audio")
+    if not audio_path or not os.path.isfile(audio_path):
+        raise HTTPException(status_code=404, detail="Original audio file not found")
+    return FileResponse(audio_path, media_type="application/octet-stream", filename=os.path.basename(audio_path))
+
+
+@router.get("/chords/{job_id}")
+def get_chords(job_id: str):
+    """Return timestamped chord segments detected from the original full song."""
+    job = jobs.get(job_id)
+    if not job or not job.get("result"):
+        raise HTTPException(status_code=404, detail="Chords are not available yet")
+    return {
+        "chords": job["result"].get("chords", []),
+        "audio_url": f"/audio/{job_id}",
+        "warning": job.get("chords_error"),
+    }
 
 
 @router.get("/stems/{job_id}")
