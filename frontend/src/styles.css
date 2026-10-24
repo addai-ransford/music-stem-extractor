@@ -382,3 +382,29 @@ input:disabled {
  .track-session-heading { align-items: flex-start; }
 }
 @media (max-width: 390px) { .studio-topbar .appbar-status { display: none; }.intro-orbit { display: none; }.track-session-heading { flex-direction: column; } }
+
+
+/* Original source preview and Chordify-style chord timeline */
+.source-preview { margin: 14px 0 6px; padding: 14px; border: 1px solid rgba(182,156,255,.16); border-radius: 12px; background: rgba(182,156,255,.035); }
+.source-preview .eyebrow { margin: 0 0 10px; color: #b7a2ff; font-size: 9px; letter-spacing: .12em; }
+.original-player-panel { margin: 22px 0; padding: 18px; border: 1px solid rgba(182,156,255,.17); border-radius: 14px; background: rgba(7,7,14,.34); text-align: left; }
+.chord-panel-heading { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 13px; }
+.chord-panel-heading .eyebrow { margin: 0 0 5px; color: #b7a2ff; font-size: 9px; letter-spacing: .12em; }
+.chord-panel-heading h4 { margin: 0; color: #f0eaff; font-size: 15px; font-weight: 650; }
+.chord-live-label { display: grid; place-items: center; min-width: 48px; min-height: 38px; padding: 5px 11px; border: 1px solid rgba(110,231,183,.22); border-radius: 10px; color: #a7f3d0; background: rgba(16,185,129,.08); font: 700 18px "Space Grotesk", sans-serif; }
+.original-audio-player { display: block; width: 100%; min-width: 0; min-height: 38px; margin: 7px 0 12px; accent-color: #b69cff; color-scheme: dark; }
+.chord-panel { margin-top: 18px; }
+.chord-panel .chord-panel-heading { margin-bottom: 10px; }
+.chord-timeline { display: flex; gap: 7px; overflow-x: auto; padding: 3px 2px 12px; scrollbar-color: rgba(182,156,255,.4) transparent; scroll-snap-type: x proximity; }
+.chord-segment { display: flex; flex: 0 0 auto; min-width: 72px; flex-direction: column; align-items: center; gap: 7px; padding: 11px 12px 9px; border: 1px solid rgba(255,255,255,.09); border-radius: 10px; color: #e7e1f8; background: rgba(255,255,255,.035); cursor: pointer; scroll-snap-align: start; transition: border-color .15s, background .15s, transform .15s; }
+.chord-segment:hover { border-color: rgba(182,156,255,.4); background: rgba(182,156,255,.09); }
+.chord-segment.is-active { transform: translateY(-2px); border-color: rgba(110,231,183,.6); color: #d1fae5; background: rgba(16,185,129,.13); box-shadow: 0 5px 18px rgba(16,185,129,.07); }
+.chord-segment strong { font: 700 18px "Space Grotesk", sans-serif; }
+.chord-segment small { color: #858198; font-size: 10px; font-variant-numeric: tabular-nums; }
+.chord-segment.is-active small { color: #a7d8c3; }
+.chord-disclaimer { margin: 8px 0 0; color: #817d93; font-size: 10px; line-height: 1.6; }
+@media (max-width: 620px) {
+  .original-player-panel { margin: 17px 0; padding: 13px; }
+  .chord-segment { min-width: 65px; padding: 10px 9px 8px; }
+  .chord-segment strong { font-size: 16px; }
+}
