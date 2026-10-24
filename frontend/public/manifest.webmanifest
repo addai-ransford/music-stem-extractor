@@ -1,0 +1,20 @@
+{
+  "id": "/",
+  "name": "Stem Lab — Music Stem Extractor",
+  "short_name": "Stem Lab",
+  "description": "Separate music into stems and find the musical key.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0b0b13",
+  "theme_color": "#0b0b13",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
