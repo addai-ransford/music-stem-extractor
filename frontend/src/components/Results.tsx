@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 
 interface ResultDisplayProps {
   jobId: string;
@@ -48,12 +48,14 @@ export default function ResultDisplay({ jobId, onStatusChange }: ResultDisplayPr
   const [detectedKey, setDetectedKey] = useState<string | null>(null);
   const [socketState, setSocketState] = useState<"connecting" | "connected" | "reconnecting">("connecting");
   const [filesLoading, setFilesLoading] = useState(false);
+  const terminalStatusRef = useRef(false);
 
   useEffect(() => {
     let disposed = false;
     let socket: WebSocket | null = null;
     let retryTimer: ReturnType<typeof setTimeout> | undefined;
     let retryDelay = 1000;
+    terminalStatusRef.current = false;
 
     const connect = () => {
       if (disposed) return;
@@ -81,6 +83,7 @@ export default function ResultDisplay({ jobId, onStatusChange }: ResultDisplayPr
           };
           const nextStatus = normalizeStatus(data.status);
           if (nextStatus !== "unknown") {
+            if (nextStatus === "done" || nextStatus === "error") terminalStatusRef.current = true;
             setStatus(nextStatus);
             onStatusChange?.(nextStatus);
           }
@@ -99,7 +102,7 @@ export default function ResultDisplay({ jobId, onStatusChange }: ResultDisplayPr
       };
 
       socket.onclose = () => {
-        if (!disposed && status !== "done" && status !== "error") scheduleReconnect();
+        if (!disposed && !terminalStatusRef.current) scheduleReconnect();
       };
     };
 
