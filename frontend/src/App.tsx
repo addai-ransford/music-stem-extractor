@@ -7,21 +7,30 @@ export default function App() {
 
   return (
     <div className="app-shell">
+      <header className="mobile-appbar">
+        <a className="app-brand" href="#" aria-label="Stem Lab home">
+          <span className="app-brand-mark" aria-hidden="true">♫</span>
+          <span className="app-brand-copy"><strong>STEM LAB</strong><small>Music tools</small></span>
+        </a>
+        <span className="appbar-status"><span aria-hidden="true" /> Ready to create</span>
+      </header>
+
       <main className="page-main">
         <div className="app-container">
           <header className="hero">
             <div className="brand-mark" aria-hidden="true">♫</div>
             <p className="eyebrow">YOUR MUSIC, EVERY LAYER</p>
-            <h1>Music Stem Extractor</h1>
+            <h1>Make room for<br className="mobile-title-break" /> every sound.</h1>
             <p className="hero-copy">
-              Separate a track into useful stems, find its key, and bring every layer into your next session.
+              Turn one track into separate stems. Find the key, isolate the details, and make the song yours.
             </p>
+            <a className="hero-cta" href="#workspace-title">Start separating <span aria-hidden="true">↓</span></a>
           </header>
 
-          <section className="workspace" aria-labelledby="workspace-title">
+          <section className="workspace" id="workspace" aria-labelledby="workspace-title">
             <div className="section-heading">
               <div>
-                <p className="eyebrow">START A NEW PROJECT</p>
+                <p className="eyebrow">NEW PROJECT</p>
                 <h2 id="workspace-title">Separate your audio</h2>
               </div>
               <span className="privacy-note"><span aria-hidden="true">●</span> Simple, focused workflow</span>
@@ -36,16 +45,16 @@ export default function App() {
             )}
           </section>
 
-          <section className="features" aria-labelledby="features-title">
+          <section className="features" id="features" aria-labelledby="features-title">
             <div className="features-heading">
-              <p className="eyebrow">MADE FOR THE NEXT TAKE</p>
-              <h2 id="features-title">From one track to a fresh start</h2>
+              <p className="eyebrow">YOUR CREATIVE TOOLKIT</p>
+              <h2 id="features-title">One track. More possibilities.</h2>
             </div>
             <div className="feature-grid">
               <article className="feature-card">
                 <span className="feature-icon" aria-hidden="true">◉</span>
-                <h3>Separate stems</h3>
-                <p>Split supported audio into vocals, drums, bass, and other parts.</p>
+                <h3>Isolate the layers</h3>
+                <p>Separate vocals, drums, bass, and other parts for your workflow.</p>
               </article>
               <article className="feature-card">
                 <span className="feature-icon" aria-hidden="true">♬</span>
@@ -54,14 +63,26 @@ export default function App() {
               </article>
               <article className="feature-card">
                 <span className="feature-icon" aria-hidden="true">⇩</span>
-                <h3>Take it with you</h3>
-                <p>Download individual WAV stems or collect them in one ZIP archive.</p>
+                <h3>Keep your stems</h3>
+                <p>Download individual WAV files or collect everything in one ZIP.</p>
               </article>
             </div>
             <p className="format-note">Upload an audio or video file, or use a supported YouTube link. Processing time depends on track length and system load.</p>
           </section>
         </div>
       </main>
+
+      <nav className="mobile-bottom-nav" aria-label="Main navigation">
+        <a className="bottom-nav-item is-current" href="#" aria-current="page">
+          <span aria-hidden="true">⌂</span><small>Studio</small>
+        </a>
+        <a className="bottom-nav-item" href="#workspace">
+          <span aria-hidden="true">＋</span><small>New project</small>
+        </a>
+        <a className="bottom-nav-item" href="#features">
+          <span aria-hidden="true">✳</span><small>Explore</small>
+        </a>
+      </nav>
       <Footer />
     </div>
   );
