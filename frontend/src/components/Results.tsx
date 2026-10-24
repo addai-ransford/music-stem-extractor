@@ -8,6 +8,8 @@ interface ResultDisplayProps {
 
 const ResultDisplay = ({ jobId, onStatusChange }: ResultDisplayProps) => {
   const [status, setStatus] = useState("queued");
+  const [stemFiles, setStemFiles] = useState<Array<{ name: string; url: string }>>([]);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     const ws = new WebSocket(`ws://localhost:8000/ws/status/${jobId}`);
@@ -17,11 +19,25 @@ const ResultDisplay = ({ jobId, onStatusChange }: ResultDisplayProps) => {
       if (data.status) {
         setStatus(data.status);
         onStatusChange?.(data.status);
+        if (data.status === "error") setError(data.error || "Audio processing failed.");
       }
     };
 
     return () => ws.close();
   }, [jobId, onStatusChange]);
+
+  useEffect(() => {
+    if (status !== "done") return;
+    let cancelled = false;
+    fetch(`http://localhost:8000/stems/${jobId}`)
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Could not load generated stem files.");
+        return response.json();
+      })
+      .then((data) => { if (!cancelled) setStemFiles(data.stems || []); })
+      .catch((err) => { if (!cancelled) setError(err.message || "Could not load stem files."); });
+    return () => { cancelled = true; };
+  }, [jobId, status]);
 
   const downloadZip = () => {
     const link = document.createElement("a");
@@ -40,7 +56,10 @@ const ResultDisplay = ({ jobId, onStatusChange }: ResultDisplayProps) => {
         textAlign: "center",
       }}
     >
-      {status !== "done" ? (
+      {error && <p style={{ color: "#b91c1c" }}>{error}</p>}
+      {status === "error" ? (
+        <p style={{ color: "#b91c1c" }}>Processing failed. Please try another audio file.</p>
+      ) : status !== "done" ? (
         <div>
           <BlinkBlur
             color={["#32cd32", "#327fcd", "#cd32cd", "#cd8032"]}
@@ -49,7 +68,35 @@ const ResultDisplay = ({ jobId, onStatusChange }: ResultDisplayProps) => {
           <h4 style={{ marginTop: 10, color: "#555" }}>{status}</h4>
         </div>
       ) : (
-        <button
+        <div style={{ display: "grid", gap: 12 }}>
+          <h3 style={{ margin: 0 }}>Your audio stems are ready</h3>
+          <p style={{ margin: 0, color: "#555" }}>Download individual WAV files or get every stem in one ZIP archive.</p>
+          <div style={{ display: "grid", gap: 8 }}>
+            {stemFiles.map((stem) => (
+              <a
+                key={stem.name}
+                href={`http://localhost:8000${stem.url}`}
+                download={stem.name}
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  gap: 12,
+                  padding: "10px 12px",
+                  border: "1px solid #ddd",
+                  borderRadius: 6,
+                  color: "#333",
+                  textDecoration: "none",
+                  textAlign: "left",
+                }}
+              >
+                <span>{stem.name.replace(/\.wav$/i, "").replace(/_/g, " ")}</span>
+                <span style={{ color: "#2563eb", whiteSpace: "nowrap" }}>Download WAV ↓</span>
+              </a>
+            ))}
+            {stemFiles.length === 0 && <p style={{ color: "#666" }}>Loading available stem files…</p>}
+          </div>
+          <button
           onClick={downloadZip}
           style={{
             marginTop: 10,
@@ -60,9 +107,10 @@ const ResultDisplay = ({ jobId, onStatusChange }: ResultDisplayProps) => {
             borderRadius: 6,
             cursor: "pointer",
           }}
-        >
-          Download Stems ZIP
-        </button>
+          >
+            Download all stems (ZIP)
+          </button>
+        </div>
       )}
     </div>
   );
