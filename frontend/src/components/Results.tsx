@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import ChordTimeline, { ChordSegment } from "./ChordTimeline";
 
 interface ResultDisplayProps {
   jobId: string;
@@ -75,6 +76,10 @@ export default function ResultDisplay({ jobId, onStatusChange }: ResultDisplayPr
   const [detectedKey, setDetectedKey] = useState<string | null>(null);
   const [socketState, setSocketState] = useState<SocketState>("connecting");
   const [filesLoading, setFilesLoading] = useState(false);
+  const [chords, setChords] = useState<ChordSegment[]>([]);
+  const [chordWarning, setChordWarning] = useState("");
+  const [currentTime, setCurrentTime] = useState(0);
+  const originalAudioRef = useRef<HTMLAudioElement | null>(null);
   const terminalStatusRef = useRef(false);
   const statusCallbackRef = useRef(onStatusChange);
 
@@ -211,6 +216,46 @@ export default function ResultDisplay({ jobId, onStatusChange }: ResultDisplayPr
     return () => controller.abort();
   }, [jobId, status]);
 
+  useEffect(() => {
+    if (status !== "done") return;
+    const controller = new AbortController();
+    fetch(`${API_BASE_URL}/chords/${encodeURIComponent(jobId)}`, { signal: controller.signal })
+      .then(async (response) => {
+        const payload: unknown = await response.json().catch(() => null);
+        if (!response.ok) throw new Error("Chord analysis is not available yet.");
+        if (!payload || typeof payload !== "object" || !Array.isArray((payload as { chords?: unknown }).chords)) {
+          throw new Error("The server returned an invalid chord timeline.");
+        }
+        const value = payload as { chords: unknown[]; warning?: unknown };
+        const parsed = value.chords.flatMap((item): ChordSegment[] => {
+          if (!item || typeof item !== "object") return [];
+          const chord = item as Partial<ChordSegment>;
+          if (typeof chord.start !== "number" || typeof chord.end !== "number" ||
+              typeof chord.chord !== "string" || chord.end <= chord.start) return [];
+          return [{ start: chord.start, end: chord.end, chord: chord.chord,
+            ...(typeof chord.confidence === "number" ? { confidence: chord.confidence } : {}) }];
+        });
+        if (!controller.signal.aborted) {
+          setChords(parsed);
+          setChordWarning(typeof value.warning === "string" ? value.warning : "");
+        }
+      })
+      .catch((loadError: unknown) => {
+        if (!controller.signal.aborted) {
+          setChords([]);
+          setChordWarning(loadError instanceof Error ? loadError.message : "Could not load chord analysis.");
+        }
+      });
+    return () => controller.abort();
+  }, [jobId, status]);
+
+  const seekToChord = (seconds: number) => {
+    if (!originalAudioRef.current) return;
+    originalAudioRef.current.currentTime = seconds;
+    setCurrentTime(seconds);
+    void originalAudioRef.current.play().catch(() => undefined);
+  };
+
   const downloadZip = () => {
     window.location.assign(`${API_BASE_URL}/download/stems/${encodeURIComponent(jobId)}`);
   };
@@ -244,6 +289,25 @@ export default function ResultDisplay({ jobId, onStatusChange }: ResultDisplayPr
             <div><p className="eyebrow">YOUR SESSION</p><p className="results-copy">Your track has been separated. Preview each layer below, then download the stems you want.</p></div>
             <span className="session-ready"><span aria-hidden="true">●</span> Ready</span>
           </div>
+          <section className="original-player-panel" aria-label="Original full song player">
+            <div className="chord-panel-heading">
+              <div><p className="eyebrow">ORIGINAL MIX</p><h4>Listen & follow chords</h4></div>
+              <span className="chord-live-label">{chords.find((item) => currentTime >= item.start && currentTime < item.end)?.chord || "—"}</span>
+            </div>
+            <audio
+              ref={originalAudioRef}
+              className="original-audio-player"
+              controls
+              preload="metadata"
+              src={`${API_BASE_URL}/audio/${encodeURIComponent(jobId)}`}
+              onTimeUpdate={(event) => setCurrentTime(event.currentTarget.currentTime)}
+              onSeeked={(event) => setCurrentTime(event.currentTarget.currentTime)}
+            >
+              Your browser does not support audio playback.
+            </audio>
+            {chordWarning && <p className="chord-disclaimer" role="status">{chordWarning}</p>}
+            <ChordTimeline chords={chords} currentTime={currentTime} onSeek={seekToChord} />
+          </section>
           <div className="stem-mixer" aria-busy={filesLoading}>
             <div className="mixer-header"><span>TRACK</span><span>PREVIEW & EXPORT</span></div>
             {filesLoading && <p className="muted-message" role="status">Loading your WAV files…</p>}
