@@ -10,7 +10,6 @@ ffmpeg-python==0.2.0
 pydub==0.25.1
 soxr==1.0.0
 soundfile==0.13.1
-spleeter==2.4.2
 
 # Data and analysis
 numpy==1.23.5
