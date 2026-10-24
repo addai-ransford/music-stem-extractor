@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import ResultDisplay from "./Results";
 
 interface UploadFormProps {
@@ -43,6 +43,17 @@ export default function UploadForm({ onError }: UploadFormProps) {
   const [loading, setLoading] = useState(false);
   const [jobId, setJobId] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!file || mode !== "upload") {
+      setPreviewUrl(null);
+      return;
+    }
+    const objectUrl = URL.createObjectURL(file);
+    setPreviewUrl(objectUrl);
+    return () => URL.revokeObjectURL(objectUrl);
+  }, [file, mode]);
 
   const handleStatusChange = useCallback((nextStatus: string) => {
     setStatus(nextStatus);
@@ -182,6 +193,15 @@ export default function UploadForm({ onError }: UploadFormProps) {
                 aria-invalid={Boolean(url.trim()) && !isSupportedYouTubeUrl(url.trim())}
               />
               <p className="field-help">Use a public video link that you’re allowed to download and process.</p>
+            </div>
+          )}
+          {mode === "upload" && previewUrl && (
+            <div className="source-preview">
+              <p className="eyebrow">SOURCE PREVIEW</p>
+              <audio className="original-audio-player" controls preload="metadata" src={previewUrl}>
+                Your browser does not support audio playback.
+              </audio>
+              <p className="field-help">Preview the original file before processing. Chords will be shown on the results screen.</p>
             </div>
           )}
           <p id="file-help" className="field-help">
