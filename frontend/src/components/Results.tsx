@@ -10,6 +10,7 @@ const ResultDisplay = ({ jobId, onStatusChange }: ResultDisplayProps) => {
   const [status, setStatus] = useState("queued");
   const [stemFiles, setStemFiles] = useState<Array<{ name: string; url: string }>>([]);
   const [error, setError] = useState("");
+  const [detectedKey, setDetectedKey] = useState<string | null>(null);
 
   useEffect(() => {
     const ws = new WebSocket(`ws://localhost:8000/ws/status/${jobId}`);
@@ -20,6 +21,7 @@ const ResultDisplay = ({ jobId, onStatusChange }: ResultDisplayProps) => {
         setStatus(data.status);
         onStatusChange?.(data.status);
         if (data.status === "error") setError(data.error || "Audio processing failed.");
+        if (data.status === "done" && data.result?.key) setDetectedKey(data.result.key);
       }
     };
 
@@ -70,6 +72,12 @@ const ResultDisplay = ({ jobId, onStatusChange }: ResultDisplayProps) => {
       ) : (
         <div style={{ display: "grid", gap: 12 }}>
           <h3 style={{ margin: 0 }}>Your audio stems are ready</h3>
+          {detectedKey && (
+            <div style={{ padding: "12px 16px", borderRadius: 8, background: "#f0fdf4", border: "1px solid #bbf7d0" }}>
+              <div style={{ fontSize: 13, color: "#166534" }}>Detected song key</div>
+              <strong style={{ display: "block", marginTop: 4, fontSize: 24, color: "#14532d" }}>{detectedKey}</strong>
+            </div>
+          )}
           <p style={{ margin: 0, color: "#555" }}>Download individual WAV files or get every stem in one ZIP archive.</p>
           <div style={{ display: "grid", gap: 8 }}>
             {stemFiles.map((stem) => (
