@@ -1,91 +1,68 @@
-import React, {useState} from "react";
+import React, { useState } from "react";
 import Footer from "./components/Footer";
 import UploadForm from "./components/UploadForm";
 
 export default function App() {
-    const [error, setError] = useState("");
+  const [error, setError] = useState("");
 
-    return (
-        <div
-            style={{
-                fontFamily: "Inter, Arial, sans-serif",
-                background: "linear-gradient(135deg, #192236 0%, #8e44ad 100%)",
-                minHeight: "100vh",
-                display: "flex",
-                flexDirection: "column",
-            }}
-        >
-            <div
-                style={{
-                    flex: 1,
-                    display: "flex",
-                    justifyContent: "center",
-                    alignItems: "flex-start",
-                    padding: "clamp(12px, 4vw, 24px)",
-                }}
-            >
-                <div
-                    style={{
-                        maxWidth: "960px",
-                        width: "100%",
-                        background: "#fff",
-                        padding: "clamp(16px, 5vw, 32px)",
-                        borderRadius: 12,
-                        boxShadow: "0 6px 18px rgba(0,0,0,0.15)",
-                        boxSizing: "border-box",
-                    }}
-                >
-                    <h1
-                        style={{
-                            margin: 0,
-                            fontSize: "clamp(22px, 6vw, 32px)",
-                            textAlign: "center",
-                        }}
-                    >
-                        🎶 Music Stem Extractor
-                    </h1>
+  return (
+    <div className="app-shell">
+      <main className="page-main">
+        <div className="app-container">
+          <header className="hero">
+            <div className="brand-mark" aria-hidden="true">♫</div>
+            <p className="eyebrow">YOUR MUSIC, EVERY LAYER</p>
+            <h1>Music Stem Extractor</h1>
+            <p className="hero-copy">
+              Separate a track into useful stems, find its key, and bring every layer into your next session.
+            </p>
+          </header>
 
-                    <div style={{marginTop: 24}}>
-                        <UploadForm onError={(msg) => setError(msg)}/>
-                        {error && <p style={{color: "red", marginTop: 12}}>{error}</p>}
-                    </div>
-
-                    <div
-                        style={{
-                            marginTop: 40,
-                            paddingTop: 20,
-                            borderTop: "4px solid red",
-                        }}
-                    >
-                        <h2
-                            style={{
-                                textAlign: "center",
-                                fontSize: "clamp(18px, 5vw, 24px)",
-                            }}
-                        >
-                            ✨ Features
-                        </h2>
-                        <ul
-                            style={{
-                                lineHeight: "1.8",
-                                color: "#333",
-                                fontSize: "clamp(14px, 3.5vw, 16px)",
-                                paddingLeft: "1.2rem",
-                            }}
-                        >
-                            <li>🎤 <strong>Extract stems</strong> (vocals, accompaniment, bass, drums — choose 2/3/4
-                                stems)
-                            </li>
-                            <li>🎼 <strong>Detect chords</strong> and build chord progressions</li>
-                            <li>🎵 <strong>Identify the key</strong> of a song</li>
-                            <li>🎶 <strong>Transcribe melody</strong> into solfège notation</li>
-                            <li>📺 Upload audio/video files <strong>or</strong> paste YouTube links</li>
-                        </ul>
-                    </div>
-                </div>
+          <section className="workspace" aria-labelledby="workspace-title">
+            <div className="section-heading">
+              <div>
+                <p className="eyebrow">START A NEW PROJECT</p>
+                <h2 id="workspace-title">Separate your audio</h2>
+              </div>
+              <span className="privacy-note"><span aria-hidden="true">●</span> Simple, focused workflow</span>
             </div>
+            <UploadForm onError={setError} />
+            {error && (
+              <div className="app-alert" role="alert">
+                <span aria-hidden="true">!</span>
+                <p>{error}</p>
+                <button className="alert-dismiss" type="button" onClick={() => setError("")} aria-label="Dismiss error">×</button>
+              </div>
+            )}
+          </section>
 
-            <Footer/>
+          <section className="features" aria-labelledby="features-title">
+            <div className="features-heading">
+              <p className="eyebrow">MADE FOR THE NEXT TAKE</p>
+              <h2 id="features-title">From one track to a fresh start</h2>
+            </div>
+            <div className="feature-grid">
+              <article className="feature-card">
+                <span className="feature-icon" aria-hidden="true">◉</span>
+                <h3>Separate stems</h3>
+                <p>Split supported audio into vocals, drums, bass, and other parts.</p>
+              </article>
+              <article className="feature-card">
+                <span className="feature-icon" aria-hidden="true">♬</span>
+                <h3>Find the key</h3>
+                <p>Get a detected musical key to help guide your next creative decision.</p>
+              </article>
+              <article className="feature-card">
+                <span className="feature-icon" aria-hidden="true">⇩</span>
+                <h3>Take it with you</h3>
+                <p>Download individual WAV stems or collect them in one ZIP archive.</p>
+              </article>
+            </div>
+            <p className="format-note">Upload an audio or video file, or use a supported YouTube link. Processing time depends on track length and system load.</p>
+          </section>
         </div>
-    );
+      </main>
+      <Footer />
+    </div>
+  );
 }
