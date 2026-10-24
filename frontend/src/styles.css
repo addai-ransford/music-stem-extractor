@@ -288,3 +288,35 @@ body { min-height: 100dvh; }
 @media (hover: none) and (pointer: coarse) {
   .mode-tab, .primary-button, .secondary-button, .bottom-nav-item, .hero-cta { touch-action: manipulation; }
 }
+
+
+/* Production accessibility and interaction states */
+:where(a, button, input, select, [tabindex]):focus-visible {
+  outline: 2px solid #c4b5fd;
+  outline-offset: 3px;
+}
+button:disabled,
+select:disabled,
+input:disabled {
+  cursor: not-allowed;
+  opacity: .58;
+}
+.stem-download-action:focus-visible {
+  border-radius: 5px;
+}
+.stem-download-action[aria-label="Download unavailable"] {
+  color: #817d93;
+  cursor: not-allowed;
+}
+.file-dropzone:focus-within {
+  border-color: rgba(196,181,253,.65);
+  box-shadow: 0 0 0 3px rgba(196,181,253,.1);
+}
+.inline-validation {
+  overflow-wrap: anywhere;
+}
+@media (forced-colors: active) {
+  :where(a, button, input, select, [tabindex]):focus-visible {
+    outline: 2px solid Highlight;
+  }
+}
