@@ -1,3 +1,4 @@
+import mimetypes
 import os
 import shutil
 import tempfile
@@ -71,7 +72,7 @@ def process_stems(job_id: str, stems: int, youtube_url: str = None, file_path: s
         stems_folder = stem_service.extract(audio_file, stems)
 
         # Keep a private copy of the original mix for playback and chord analysis.
-        original_audio = os.path.join(stems_folder, "original_audio" + os.path.splitext(audio_file)[1].lower())
+        original_audio = os.path.join(os.path.dirname(stems_folder), f"{job_id}_original_audio{os.path.splitext(audio_file)[1].lower()}")
         if os.path.abspath(audio_file) != os.path.abspath(original_audio):
             shutil.copy2(audio_file, original_audio)
 
@@ -235,7 +236,7 @@ def get_original_audio(job_id: str):
     audio_path = job["result"].get("original_audio")
     if not audio_path or not os.path.isfile(audio_path):
         raise HTTPException(status_code=404, detail="Original audio file not found")
-    return FileResponse(audio_path, media_type="application/octet-stream", filename=os.path.basename(audio_path))
+    return FileResponse(audio_path, media_type=mimetypes.guess_type(audio_path)[0] or "application/octet-stream", filename=os.path.basename(audio_path))
 
 
 @router.get("/chords/{job_id}")
@@ -265,6 +266,7 @@ def list_stems(job_id: str):
         if name.lower().endswith(".wav")
         and os.path.isfile(os.path.join(stems_folder, name))
         and name != "instrumental.wav"
+        and not name.lower().startswith("original_audio")
     )
     return {"stems": [{"name": name, "url": f"/download/stems/{job_id}/{name}"} for name in files]}
 
