@@ -1,0 +1,35 @@
+name: macOS compatibility
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [feature/instrument-separation]
+  workflow_dispatch:
+
+jobs:
+  macos-install-and-build:
+    # macos-14 provides an Apple Silicon runner on GitHub-hosted standard runners.
+    runs-on: macos-14
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Install backend dependencies for macOS
+        run: |
+          chmod +x install-macos.sh run.sh
+          ./install-macos.sh
+      - name: Compile Python modules
+        run: |
+          source .venv/bin/activate
+          python -m compileall -q backend
+      - name: Build frontend
+        run: |
+          cd frontend
+          npm install
+          npm run build
