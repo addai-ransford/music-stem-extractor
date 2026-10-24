@@ -1,24 +1,29 @@
-# FastAPI for backend
+# Tested dependency target: Python 3.10 (required by Spleeter/TensorFlow 2.12)
+# Install TensorFlow for your Mac architecture with install-macos.sh before Spleeter.
 fastapi==0.116.1
 uvicorn==0.23.2
+python-multipart==0.0.20
 
-# Machine Learning / TensorFlow macOS
-tensorflow-macos==2.12.0
-tensorflow-metal==0.8.0
-
-# Music processing (spleeter will be installed manually)
+# Audio processing
 librosa==0.10.1
 ffmpeg-python==0.2.0
 pydub==0.25.1
 soxr==1.0.0
 soundfile==0.13.1
+spleeter==2.4.2
 
-# Data & analysis
+# Data and analysis
 numpy==1.23.5
 pandas==1.5.3
 scipy==1.9.3
 scikit-learn==1.7.2
 matplotlib==3.10.6
+fpdf==1.7.2
+
+# Spleeter runtime dependencies (TensorFlow installed separately on macOS)
+httpx==0.19.0
+typer==0.3.2
+norbert==0.2.1
 
 # Utilities
 click==7.1.2
