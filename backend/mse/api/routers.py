@@ -170,6 +170,39 @@ async def websocket_status(ws: WebSocket, job_id: str):
             connections[job_id].remove(ws)
 
 
+@router.get("/stems/{job_id}")
+def list_stems(job_id: str):
+    """List generated audio stems available for individual download."""
+    job = jobs.get(job_id)
+    if not job or not job.get("result"):
+        raise HTTPException(status_code=404, detail="Stems not found")
+    stems_folder = job["result"].get("stems_folder")
+    if not stems_folder or not os.path.isdir(stems_folder):
+        raise HTTPException(status_code=404, detail="Stem files not found")
+    files = sorted(
+        name for name in os.listdir(stems_folder)
+        if name.lower().endswith(".wav")
+        and os.path.isfile(os.path.join(stems_folder, name))
+        and name != "instrumental.wav"
+    )
+    return {"stems": [{"name": name, "url": f"/download/stems/{job_id}/{name}"} for name in files]}
+
+
+@router.get("/download/stems/{job_id}/{stem_name}")
+def download_single_stem(job_id: str, stem_name: str):
+    """Serve only WAV files located in this job's output folder."""
+    job = jobs.get(job_id)
+    if not job or not job.get("result"):
+        raise HTTPException(status_code=404, detail="Stems not found")
+    if os.path.basename(stem_name) != stem_name or not stem_name.lower().endswith(".wav"):
+        raise HTTPException(status_code=400, detail="Invalid stem filename")
+    stems_folder = job["result"].get("stems_folder")
+    stem_path = os.path.join(stems_folder or "", stem_name)
+    if not stems_folder or not os.path.isdir(stems_folder) or not os.path.isfile(stem_path):
+        raise HTTPException(status_code=404, detail="Stem file not found")
+    return FileResponse(stem_path, media_type="audio/wav", filename=stem_name)
+
+
 @router.get("/download/stems/{job_id}")
 def download_stems(job_id: str):
     job = jobs.get(job_id)
