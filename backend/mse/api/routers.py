@@ -1,4 +1,5 @@
 import os
+import tempfile
 import uuid
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException, WebSocket, WebSocketDisconnect, BackgroundTasks
 from fastapi.responses import FileResponse, JSONResponse
@@ -10,6 +11,10 @@ from backend.mse.utils.audio_utils import extract_audio_from_video, safe_zip_fol
     build_instrumental
 
 router = APIRouter()
+
+MAX_UPLOAD_BYTES = 500 * 1024 * 1024
+ALLOWED_UPLOAD_EXTENSIONS = {".mp3", ".wav", ".flac", ".m4a", ".aac", ".ogg", ".opus", ".mp4", ".mov", ".mkv", ".avi", ".webm"}
+UPLOAD_CHUNK_BYTES = 1024 * 1024
 
 # Services
 stem_service = SpleeterStemExtractor()
@@ -91,6 +96,13 @@ def process_stems(job_id: str, stems: int, youtube_url: str = None, file_path: s
         jobs[job_id]["status"] = "error"
         jobs[job_id]["error"] = str(e)
         notify(job_id, {"status": "error", "error": str(e)})
+    finally:
+        # Uploaded source files are temporary; never leave user uploads behind.
+        if file_path and os.path.isfile(file_path):
+            try:
+                os.remove(file_path)
+            except OSError:
+                pass
 
 
 # ---------------- Analyze PDF ----------------
@@ -139,9 +151,35 @@ async def process(background_tasks: BackgroundTasks, stems: int = Form(...), you
 
     file_path = None
     if file:
-        file_path = f"/tmp/{file.filename}"
-        with open(file_path, "wb") as f:
-            f.write(await file.read())
+        # Never use a client-supplied filename as a filesystem path.
+        extension = os.path.splitext(os.path.basename(file.filename or ""))[1].lower()
+        if extension not in ALLOWED_UPLOAD_EXTENSIONS:
+            raise HTTPException(status_code=400, detail="Unsupported file type.")
+
+        temp_file = tempfile.NamedTemporaryFile(
+            prefix=f"mse-{job_id}-",
+            suffix=extension,
+            dir="/tmp",
+            delete=False,
+        )
+        file_path = temp_file.name
+        total_bytes = 0
+        try:
+            with temp_file:
+                while True:
+                    chunk = await file.read(UPLOAD_CHUNK_BYTES)
+                    if not chunk:
+                        break
+                    total_bytes += len(chunk)
+                    if total_bytes > MAX_UPLOAD_BYTES:
+                        raise HTTPException(status_code=413, detail="File exceeds the 500 MB upload limit.")
+                    temp_file.write(chunk)
+        except Exception:
+            if file_path and os.path.isfile(file_path):
+                os.remove(file_path)
+            raise
+        finally:
+            await file.close()
 
     background_tasks.add_task(process_stems, job_id, stems, youtube_url, file_path)
     return JSONResponse({"job_id": job_id})
