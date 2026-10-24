@@ -19,31 +19,73 @@ class LibrosaFeatureExtractor(IFeatureExtractor):
 
     def detect_key(self, audio_path: str) -> str:
         """
-        Detect the musical key (major or minor) of the given audio file.
-        Uses chroma feature correlation with standard major/minor profiles.
+        Estimate the global musical key from harmonic audio.
 
-        Args:
-            audio_path (str): Path to the audio file.
+        Uses harmonic-percussive separation, frame-wise chroma normalization,
+        and Pearson correlation against Krumhansl-Schmuckler major/minor
+        profiles. Analysing multiple frames reduces the influence of short
+        percussion hits and loud isolated notes.
 
-        Returns:
-            str: Detected key as note name and scale, e.g., "C major".
+        Note: audio-only key detection is an estimate, especially for short,
+        noisy, modal, or heavily syncopated recordings.
         """
-        y, sr = librosa.load(audio_path, sr=44100)  # Load audio with 44.1kHz
-        chroma = librosa.feature.chroma_cqt(y=y, sr=sr).mean(axis=1)  # Average chroma
+        y, sr = librosa.load(audio_path, sr=22050, mono=True)
+        if y.size == 0 or not np.isfinite(y).all() or float(np.max(np.abs(y))) < 1e-6:
+            raise ValueError("Cannot detect musical key from an empty or silent audio file.")
 
-        # Standard major and minor key profiles
-        major = np.array([6.35,2.23,3.48,2.33,4.38,4.09,2.52,5.19,2.39,3.66,2.29,2.88])
-        minor = np.array([6.33,2.68,3.52,5.38,2.60,3.53,2.54,4.75,3.98,2.69,3.34,3.17])
+        # A harmonic signal is more useful for key estimation than the full mix.
+        harmonic, _ = librosa.effects.hpss(y)
+        if float(np.max(np.abs(harmonic))) < 1e-6:
+            harmonic = y
 
+        # CQT chroma works well across different octaves. Keep time frames
+        # instead of averaging first so transient/silent frames can be ignored.
+        chroma = librosa.feature.chroma_cqt(y=harmonic, sr=sr, hop_length=2048)
+        frame_energy = librosa.feature.rms(y=harmonic, frame_length=8192, hop_length=2048)[0]
+
+        # Align frame counts defensively, then exclude near-silent frames.
+        frame_count = min(chroma.shape[1], frame_energy.shape[0])
+        chroma = chroma[:, :frame_count]
+        frame_energy = frame_energy[:frame_count]
+        if frame_count == 0:
+            raise ValueError("Not enough audio to estimate a musical key.")
+
+        active = frame_energy > max(float(frame_energy.max()) * 0.08, 1e-5)
+        if not np.any(active):
+            raise ValueError("Not enough audible harmonic content to estimate a musical key.")
+
+        active_chroma = chroma[:, active]
+        # Normalize each frame so loud sections do not dominate only by volume.
+        active_chroma = active_chroma / (np.linalg.norm(active_chroma, axis=0, keepdims=True) + 1e-8)
+        # Slightly weight louder active frames while limiting extreme dynamics.
+        weights = np.sqrt(frame_energy[active])
+        weights = weights / (weights.mean() + 1e-8)
+        weights = np.clip(weights, 0.5, 2.0)
+        profile = np.average(active_chroma, axis=1, weights=weights)
+        profile = (profile - profile.mean()) / (profile.std() + 1e-8)
+
+        # Krumhansl-Kessler key profiles, in C-to-B pitch-class order.
+        major = np.array([6.35, 2.23, 3.48, 2.33, 4.38, 4.09,
+                          2.52, 5.19, 2.39, 3.66, 2.29, 2.88], dtype=float)
+        minor = np.array([6.33, 2.68, 3.52, 5.38, 2.60, 3.53,
+                          2.54, 4.75, 3.98, 2.69, 3.34, 3.17], dtype=float)
+
+        note_names = ["C", "C#", "D", "D#", "E", "F",
+                      "F#", "G", "G#", "A", "A#", "B"]
         scores = []
-        for i in range(12):
-            # Correlate rotated major/minor profiles with audio chroma
-            scores.append((i, "major", float(np.correlate(np.roll(major, i), chroma))))
-            scores.append((i, "minor", float(np.correlate(np.roll(minor, i), chroma))))
+        for mode, base_profile in (("major", major), ("minor", minor)):
+            normalized_profile = (base_profile - base_profile.mean()) / base_profile.std()
+            for tonic in range(12):
+                # Rotating right aligns the profile's tonic with this pitch class.
+                candidate = np.roll(normalized_profile, tonic)
+                score = float(np.corrcoef(profile, candidate)[0, 1])
+                if np.isfinite(score):
+                    scores.append((score, tonic, mode))
 
-        # Select key with highest correlation
-        best = max(scores, key=lambda x: x[2])
-        return librosa.midi_to_note(60 + best[0])[:-1] + f" {best[1]}"
+        if not scores:
+            raise ValueError("Musical key estimation was inconclusive for this audio.")
+        _, tonic, mode = max(scores, key=lambda item: item[0])
+        return f"{note_names[tonic]} {mode}"
 
     def extract_chords(self, audio_path: str):
         """
