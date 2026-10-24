@@ -7,7 +7,7 @@ interface UploadFormProps {
 
 type InputMode = "upload" | "link";
 
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? "http://localhost:8000" : window.location.origin)).replace(/\/$/, "");
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "http://localhost:8000").replace(/\/$/, "");
 const MAX_FILE_SIZE = 500 * 1024 * 1024;
 const ACCEPTED_EXTENSIONS = /\.(mp3|wav|flac|m4a|aac|ogg|opus|mp4|mov|mkv|avi|webm)$/i;
 
