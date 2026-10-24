@@ -21,7 +21,7 @@ type SocketState = "connecting" | "connected" | "reconnecting";
 
 const API_BASE_URL = (
   import.meta.env.VITE_API_BASE_URL ||
-  (import.meta.env.DEV ? "http://localhost:8000" : window.location.origin)
+  "http://localhost:8000"
 ).replace(/\/$/, "");
 const WS_BASE_URL = (
   import.meta.env.VITE_WS_BASE_URL ||
