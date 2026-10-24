@@ -35,6 +35,8 @@ source "$VENV_DIR/bin/activate"
 python -m pip install --upgrade "pip<25"
 
 python -m pip install -r backend/requirements.txt
+# Fail early if the pinned base requirements are internally inconsistent.
+python -m pip check
 
 ARCH="$(uname -m)"
 if [ "$ARCH" = "arm64" ]; then
@@ -54,11 +56,13 @@ python -m pip install --no-deps spleeter==2.4.2
 
 python - <<'PY'
 import fastapi, librosa, numpy, tensorflow, spleeter
+from spleeter.separator import Separator
 from fastapi import File, Form
 print("Python audio stack imports OK")
 print("TensorFlow:", tensorflow.__version__)
 print("NumPy:", numpy.__version__)
 print("FastAPI:", fastapi.__version__)
+print("Spleeter import and Separator:", Separator.__name__)
 PY
 
 echo
