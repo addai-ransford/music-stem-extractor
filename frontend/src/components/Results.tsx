@@ -10,10 +10,23 @@ interface StemFile {
   url: string;
 }
 
-type JobStatus = "queued" | "downloading" | "extracting" | "key" | "zipping" | "done" | "error" | "connecting" | "unknown";
+interface StatusMessage {
+  status?: unknown;
+  error?: unknown;
+  result?: { key?: unknown } | null;
+}
 
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "http://localhost:8000").replace(/\/$/, "");
-const WS_BASE_URL = (import.meta.env.VITE_WS_BASE_URL || API_BASE_URL.replace(/^http/, "ws")).replace(/\/$/, "");
+type JobStatus = "queued" | "downloading" | "extracting" | "key" | "zipping" | "done" | "error" | "unknown";
+type SocketState = "connecting" | "connected" | "reconnecting";
+
+const API_BASE_URL = (
+  import.meta.env.VITE_API_BASE_URL ||
+  (import.meta.env.DEV ? "http://localhost:8000" : window.location.origin)
+).replace(/\/$/, "");
+const WS_BASE_URL = (
+  import.meta.env.VITE_WS_BASE_URL ||
+  API_BASE_URL.replace(/^http/, "ws")
+).replace(/\/$/, "");
 
 const STEPS: Array<{ id: JobStatus; title: string; description: string }> = [
   { id: "downloading", title: "Preparing audio", description: "Getting your source file ready." },
@@ -31,12 +44,26 @@ function normalizeStatus(value: unknown): JobStatus {
   if (status.includes("extract") || status.includes("separat")) return "extracting";
   if (status.includes("download") || status.includes("saving") || status.includes("prepar")) return "downloading";
   if (status.includes("queue")) return "queued";
+  // The API also emits "analyzing" while preparing audio features.
+  if (status.includes("analyz")) return "key";
   return "unknown";
+}
+
+function getStemDownloadUrl(path: string): string | null {
+  // Stem URLs are expected to be API-relative paths. Reject protocol-relative,
+  // javascript:, and unrelated absolute URLs rather than turning them into links.
+  if (!path.startsWith("/") || path.startsWith("//")) return null;
+  try {
+    const url = new URL(path, API_BASE_URL);
+    const apiOrigin = new URL(API_BASE_URL).origin;
+    return url.origin === apiOrigin ? url.toString() : null;
+  } catch {
+    return null;
+  }
 }
 
 function statusMessage(status: JobStatus): string {
   if (status === "queued") return "Your job is in the queue.";
-  if (status === "connecting") return "Connecting to the processing server…";
   if (status === "unknown") return "Your audio is being processed.";
   return STEPS.find((step) => step.id === status)?.description || "Your audio is being processed.";
 }
@@ -46,20 +73,26 @@ export default function ResultDisplay({ jobId, onStatusChange }: ResultDisplayPr
   const [stemFiles, setStemFiles] = useState<StemFile[]>([]);
   const [error, setError] = useState("");
   const [detectedKey, setDetectedKey] = useState<string | null>(null);
-  const [socketState, setSocketState] = useState<"connecting" | "connected" | "reconnecting">("connecting");
+  const [socketState, setSocketState] = useState<SocketState>("connecting");
   const [filesLoading, setFilesLoading] = useState(false);
   const terminalStatusRef = useRef(false);
+  const statusCallbackRef = useRef(onStatusChange);
+
+  useEffect(() => {
+    statusCallbackRef.current = onStatusChange;
+  }, [onStatusChange]);
 
   useEffect(() => {
     let disposed = false;
     let socket: WebSocket | null = null;
     let retryTimer: ReturnType<typeof setTimeout> | undefined;
     let retryDelay = 1000;
+    let reconnectAttempts = 0;
     terminalStatusRef.current = false;
 
     const connect = () => {
-      if (disposed) return;
-      setSocketState(retryDelay > 1000 ? "reconnecting" : "connecting");
+      if (disposed || terminalStatusRef.current) return;
+      setSocketState(reconnectAttempts > 0 ? "reconnecting" : "connecting");
 
       try {
         socket = new WebSocket(`${WS_BASE_URL}/ws/status/${encodeURIComponent(jobId)}`);
@@ -70,30 +103,38 @@ export default function ResultDisplay({ jobId, onStatusChange }: ResultDisplayPr
 
       socket.onopen = () => {
         if (disposed) return;
-        retryDelay = 1000;
         setSocketState("connected");
+        // Do not reset the backoff here: a socket that opens and immediately
+        // closes must not create a tight reconnect loop.
       };
 
       socket.onmessage = (event) => {
+        if (disposed) return;
+        let data: StatusMessage;
         try {
-          const data = JSON.parse(event.data) as {
-            status?: unknown;
-            error?: unknown;
-            result?: { key?: unknown };
-          };
-          const nextStatus = normalizeStatus(data.status);
-          if (nextStatus !== "unknown") {
-            if (nextStatus === "done" || nextStatus === "error") terminalStatusRef.current = true;
-            setStatus(nextStatus);
-            onStatusChange?.(nextStatus);
-          }
-          if (typeof data.error === "string" && data.error.trim()) setError(data.error);
-          if (nextStatus === "error") {
-            setError(typeof data.error === "string" && data.error.trim() ? data.error : "Audio processing failed. Please try another file or link.");
-          }
-          if (data.result && typeof data.result.key === "string") setDetectedKey(data.result.key);
+          data = JSON.parse(event.data) as StatusMessage;
         } catch {
-          setError("Received an unreadable update from the processing server. Reconnecting…");
+          setError("The processing server sent an unreadable update. Reconnecting…");
+          return;
+        }
+
+        const nextStatus = normalizeStatus(data.status);
+        if (nextStatus !== "unknown") {
+          if (nextStatus === "done" || nextStatus === "error") terminalStatusRef.current = true;
+          setStatus(nextStatus);
+          statusCallbackRef.current?.(nextStatus);
+          if (nextStatus !== "error") setError("");
+        }
+
+        if (typeof data.error === "string" && data.error.trim()) {
+          setError(data.error.trim());
+          if (nextStatus === "error") terminalStatusRef.current = true;
+        } else if (nextStatus === "error") {
+          setError("Audio processing failed. Please try another file or link.");
+        }
+
+        if (data.result && typeof data.result.key === "string" && data.result.key.trim()) {
+          setDetectedKey(data.result.key.trim());
         }
       };
 
@@ -107,13 +148,15 @@ export default function ResultDisplay({ jobId, onStatusChange }: ResultDisplayPr
     };
 
     const scheduleReconnect = () => {
-      if (disposed || retryTimer) return;
+      if (disposed || terminalStatusRef.current || retryTimer) return;
       setSocketState("reconnecting");
+      reconnectAttempts += 1;
+      const delay = retryDelay + Math.floor(Math.random() * 250);
+      retryDelay = Math.min(retryDelay * 2, 15000);
       retryTimer = setTimeout(() => {
         retryTimer = undefined;
-        retryDelay = Math.min(retryDelay * 2, 10000);
         connect();
-      }, retryDelay);
+      }, delay);
     };
 
     connect();
@@ -122,33 +165,50 @@ export default function ResultDisplay({ jobId, onStatusChange }: ResultDisplayPr
       if (retryTimer) clearTimeout(retryTimer);
       socket?.close();
     };
-    // The socket is tied to a job. Status updates should not recreate the connection.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [jobId]);
 
   useEffect(() => {
     if (status !== "done") return;
-    let cancelled = false;
+    const controller = new AbortController();
     setFilesLoading(true);
-    fetch(`${API_BASE_URL}/stems/${encodeURIComponent(jobId)}`)
+    setError("");
+
+    fetch(`${API_BASE_URL}/stems/${encodeURIComponent(jobId)}`, { signal: controller.signal })
       .then(async (response) => {
-        const payload = await response.json().catch(() => null);
+        const payload: unknown = await response.json().catch(() => null);
         if (!response.ok) {
-          const detail = payload && typeof payload === "object" && typeof payload.detail === "string" ? payload.detail : "Could not load generated stem files.";
+          const detail = payload && typeof payload === "object" && typeof (payload as { detail?: unknown }).detail === "string"
+            ? (payload as { detail: string }).detail
+            : "Could not load generated stem files.";
           throw new Error(detail);
         }
-        return payload as { stems?: StemFile[] };
+        if (!payload || typeof payload !== "object" || !Array.isArray((payload as { stems?: unknown }).stems)) {
+          throw new Error("The server response did not contain a valid stem list.");
+        }
+        return (payload as { stems: unknown[] }).stems.flatMap((item): StemFile[] => {
+          if (!item || typeof item !== "object") return [];
+          const candidate = item as { name?: unknown; url?: unknown };
+          if (typeof candidate.name !== "string" || !candidate.name.trim() || typeof candidate.url !== "string") return [];
+          return [{ name: candidate.name, url: candidate.url }];
+        });
       })
-      .then((payload) => {
-        if (!cancelled) setStemFiles(Array.isArray(payload.stems) ? payload.stems : []);
+      .then((files) => {
+        if (!controller.signal.aborted) {
+          setStemFiles(files);
+          if (files.length === 0) setError("Processing finished, but the server did not return any downloadable WAV stems.");
+        }
       })
-      .catch((loadError) => {
-        if (!cancelled) setError(loadError instanceof Error ? loadError.message : "Could not load stem files.");
+      .catch((loadError: unknown) => {
+        if (!controller.signal.aborted) {
+          setStemFiles([]);
+          setError(loadError instanceof Error ? loadError.message : "Could not load stem files.");
+        }
       })
       .finally(() => {
-        if (!cancelled) setFilesLoading(false);
+        if (!controller.signal.aborted) setFilesLoading(false);
       });
-    return () => { cancelled = true; };
+
+    return () => controller.abort();
   }, [jobId, status]);
 
   const downloadZip = () => {
@@ -181,21 +241,30 @@ export default function ResultDisplay({ jobId, onStatusChange }: ResultDisplayPr
             </div>
           )}
           <p className="results-copy">Download the stems you need, or grab the full collection as a ZIP archive.</p>
-          <div className="stem-list">
-            {filesLoading && <p className="muted-message">Loading your WAV files…</p>}
+          <div className="stem-list" aria-busy={filesLoading}>
+            {filesLoading && <p className="muted-message" role="status">Loading your WAV files…</p>}
             {!filesLoading && stemFiles.length === 0 && (
-              <p className="muted-message">{error || "No individual stem files were returned. Try downloading the full ZIP archive."}</p>
+              <p className="muted-message" role="status">{error || "No individual stem files were returned. You can try the full ZIP archive."}</p>
             )}
-            {stemFiles.map((stem) => (
-              <a className="stem-download" key={stem.name} href={`${API_BASE_URL}${stem.url}`} download={stem.name}>
-                <span className="stem-file-icon" aria-hidden="true">♫</span>
-                <span className="stem-file-info">
-                  <strong>{stem.name.replace(/\.wav$/i, "").replace(/[_-]/g, " ")}</strong>
-                  <small>WAV audio file</small>
-                </span>
-                <span className="stem-download-action">Download <span aria-hidden="true">↓</span></span>
-              </a>
-            ))}
+            {stemFiles.map((stem) => {
+              const downloadUrl = getStemDownloadUrl(stem.url);
+              return (
+                <div className="stem-download" key={stem.name}>
+                  <span className="stem-file-icon" aria-hidden="true">♫</span>
+                  <span className="stem-file-info">
+                    <strong>{stem.name.replace(/\.wav$/i, "").replace(/[_-]/g, " ")}</strong>
+                    <small>WAV audio file</small>
+                  </span>
+                  {downloadUrl ? (
+                    <a className="stem-download-action" href={downloadUrl} download={stem.name} aria-label={`Download ${stem.name}`}>
+                      Download <span aria-hidden="true">↓</span>
+                    </a>
+                  ) : (
+                    <span className="stem-download-action" aria-label="Download unavailable">Unavailable</span>
+                  )}
+                </div>
+              );
+            })}
           </div>
           <button className="secondary-button download-all-button" type="button" onClick={downloadZip}>
             <span aria-hidden="true">⇩</span> Download all stems (.ZIP)
@@ -213,7 +282,7 @@ export default function ResultDisplay({ jobId, onStatusChange }: ResultDisplayPr
           <p className="progress-description">{socketState === "reconnecting" ? "Reconnecting to live updates. Processing may continue in the background." : statusMessage(status)}</p>
           <ol className="progress-steps">
             {STEPS.map((step, index) => {
-              const complete = finished || (activeStepIndex >= 0 && index < activeStepIndex);
+              const complete = activeStepIndex >= 0 && index < activeStepIndex;
               const active = step.id === status;
               return (
                 <li className={complete ? "progress-step is-complete" : active ? "progress-step is-active" : "progress-step"} key={step.id}>
@@ -227,7 +296,7 @@ export default function ResultDisplay({ jobId, onStatusChange }: ResultDisplayPr
               );
             })}
           </ol>
-          <p className="connection-note">
+          <p className="connection-note" role="status">
             <span className={socketState === "connected" ? "connection-dot is-connected" : "connection-dot"} aria-hidden="true" />
             {socketState === "connected" ? "Live status connected" : socketState === "reconnecting" ? "Restoring live updates…" : "Connecting to live updates…"}
           </p>
