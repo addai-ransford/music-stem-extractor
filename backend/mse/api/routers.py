@@ -79,9 +79,10 @@ def process_stems(job_id: str, stems: int, youtube_url: str = None, file_path: s
 
         jobs[job_id]["status"] = "done"
         jobs[job_id]["result"] = {
-            "stems_zip": stems_url,
+            "stems_zip": zip_file,
             "key": key,
-            "stems_folder": stems_folder
+            "stems_folder": stems_folder,
+            "instrumental": instrumental
         }
         jobs[job_id]["pdf_path"] = None
         notify(job_id, {"status": "done", "result": jobs[job_id]["result"]})
@@ -100,7 +101,7 @@ def analyze_pdf(job_id: str):
             raise ValueError("Stems not available yet")
 
         stems_folder = job["result"]["stems_folder"]
-        instrumental = f"{stems_folder}/accompaniment.wav"
+        instrumental = job["result"].get("instrumental", f"{stems_folder}/accompaniment.wav")
         vocals = f"{stems_folder}/vocals.wav"
 
         jobs[job_id]["status"] = "analyzing"
@@ -128,8 +129,8 @@ def analyze_pdf(job_id: str):
 @router.post("/process")
 async def process(background_tasks: BackgroundTasks, stems: int = Form(...), youtube_url: str = Form(None),
                   file: UploadFile = File(None)):
-    if stems not in (2, 3, 4):
-        raise HTTPException(status_code=400, detail="stems must be 2, 3, or 4")
+    if stems not in (2, 4, 5):
+        raise HTTPException(status_code=400, detail="stems must be 2, 4, or 5")
     if youtube_url and file:
         raise HTTPException(status_code=400, detail="Provide either youtube_url or file, not both")
 
