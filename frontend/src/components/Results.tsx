@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import ChordTimeline, { ChordSegment } from "./ChordTimeline";
+import ChordTimeline, { type ChordSegment } from "./ChordTimeline";
 
 interface ResultDisplayProps {
   jobId: string;
