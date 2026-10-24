@@ -1,171 +1,219 @@
-import React, {useState} from "react";
+import React, { useCallback, useState } from "react";
 import ResultDisplay from "./Results";
 
 interface UploadFormProps {
-    onError: (msg: string) => void;
+  onError: (msg: string) => void;
 }
 
-export default function UploadForm({onError}: UploadFormProps) {
-    const [mode, setMode] = useState<"upload" | "link">("link");
-    const [file, setFile] = useState<File | null>(null);
-    const [url, setUrl] = useState("");
-    const [stems, setStems] = useState(4);
-    const [loading, setLoading] = useState(false);
-    const [jobId, setJobId] = useState<string | null>(null);
-    const [status, setStatus] = useState<string | null>(null);
+type InputMode = "upload" | "link";
 
-    async function handleSubmit(e: React.FormEvent) {
-        e.preventDefault();
-        onError("");
-        setLoading(true);
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "http://localhost:8000").replace(/\/$/, "");
+const MAX_FILE_SIZE = 500 * 1024 * 1024;
+const ACCEPTED_EXTENSIONS = /\.(mp3|wav|flac|m4a|aac|ogg|opus|mp4|mov|mkv|avi|webm)$/i;
 
-        try {
-            const form = new FormData();
-            form.append("stems", stems.toString());
+function getApiError(payload: unknown, fallback: string): string {
+  if (typeof payload === "string" && payload.trim()) return payload;
+  if (payload && typeof payload === "object") {
+    const value = payload as { detail?: unknown; message?: unknown };
+    if (typeof value.detail === "string") return value.detail;
+    if (typeof value.message === "string") return value.message;
+  }
+  return fallback;
+}
 
-            if (mode === "link") {
-                if (!url) throw new Error("Provide a YouTube URL");
-                form.append("youtube_url", url);
-            } else {
-                if (!file) throw new Error("Choose a file");
-                form.append("file", file);
-            }
+function isSupportedYouTubeUrl(value: string): boolean {
+  try {
+    const parsed = new URL(value);
+    const host = parsed.hostname.toLowerCase().replace(/^www\./, "");
+    return ["youtube.com", "m.youtube.com", "music.youtube.com", "youtu.be"].includes(host)
+      && (host !== "youtu.be" || parsed.pathname.length > 1);
+  } catch {
+    return false;
+  }
+}
 
-            const res = await fetch("http://localhost:8000/process", {
-                method: "POST",
-                body: form,
-            });
+export default function UploadForm({ onError }: UploadFormProps) {
+  const [mode, setMode] = useState<InputMode>("link");
+  const [file, setFile] = useState<File | null>(null);
+  const [url, setUrl] = useState("");
+  const [stems, setStems] = useState(4);
+  const [loading, setLoading] = useState(false);
+  const [jobId, setJobId] = useState<string | null>(null);
+  const [status, setStatus] = useState<string | null>(null);
 
-            if (!res.ok) {
-                const text = await res.text();
-                onError(text || "Processing failed");
-                setLoading(false);
-                return;
-            }
+  const handleStatusChange = useCallback((nextStatus: string) => {
+    setStatus(nextStatus);
+  }, []);
 
-            const data: { job_id: string } = await res.json();
-            setJobId(data.job_id);
-            setStatus("queued");
-        } catch (err: any) {
-            onError(err.message);
-        } finally {
-            setLoading(false);
-        }
+  const processing = Boolean(jobId && status !== "done" && status !== "error");
+  const formDisabled = loading || processing;
+  const fileInvalid = Boolean(file && (!ACCEPTED_EXTENSIONS.test(file.name) || file.size > MAX_FILE_SIZE));
+  const inputInvalid = mode === "upload" ? !file || fileInvalid : !url.trim() || !isSupportedYouTubeUrl(url.trim());
+  const canSubmit = !formDisabled && !inputInvalid;
+
+  function changeMode(nextMode: InputMode) {
+    setMode(nextMode);
+    onError("");
+  }
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    onError("");
+
+    if (mode === "link" && !isSupportedYouTubeUrl(url.trim())) {
+      onError("Enter a valid YouTube URL, such as https://www.youtube.com/watch?v=…");
+      return;
+    }
+    if (mode === "upload" && !file) {
+      onError("Choose an audio or video file to continue.");
+      return;
+    }
+    if (mode === "upload" && file && !ACCEPTED_EXTENSIONS.test(file.name)) {
+      onError("This file type is not supported. Try MP3, WAV, FLAC, M4A, AAC, OGG, MP4, MOV, MKV, or WEBM.");
+      return;
+    }
+    if (file && file.size > MAX_FILE_SIZE) {
+      onError("This file is larger than the 500 MB upload limit.");
+      return;
     }
 
-    const inputStyle = {
-        padding: 8,
-        borderRadius: 6,
-        border: "1px solid #ddd",
-        height: 40,
-        boxSizing: "border-box" as const,
-    };
+    setLoading(true);
+    setJobId(null);
+    setStatus(null);
 
-    const formDisabled = loading || (status !== null && status !== "done");
+    try {
+      const form = new FormData();
+      form.append("stems", String(stems));
+      if (mode === "link") form.append("youtube_url", url.trim());
+      else if (file) form.append("file", file);
 
-    return (
-        <div>
-            <form onSubmit={handleSubmit} style={{display: "grid", gap: 12}}>
-                <fieldset
-                    disabled={formDisabled}
-                    style={{display: "contents"}}
-                >
-                    <div style={{display: "flex", gap: 8}}>
-                        <button
-                            type="button"
-                            onClick={() => setMode("upload")}
-                            style={{
-                                padding: "8px 12px",
-                                background: mode === "upload" ? "#af41ec" : "#eee",
-                                color: mode === "upload" ? "#fff" : "#222",
-                                border: "none",
-                                minWidth: 120,
-                                borderRadius: 6,
-                                cursor: "pointer",
-                            }}
-                        >
-                            Upload
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => setMode("link")}
-                            style={{
-                                padding: "8px 12px",
-                                background: mode === "link" ? "#af41ec" : "#eee",
-                                color: mode === "link" ? "#fff" : "#222",
-                                border: "none",
-                                minWidth: 120,
-                                borderRadius: 6,
-                                cursor: "pointer",
-                            }}
-                        >
-                            YouTube
-                        </button>
-                    </div>
+      const response = await fetch(`${API_BASE_URL}/process`, { method: "POST", body: form });
+      const payload: unknown = await response.json().catch(() => null);
 
-                    {mode === "upload" ? (
-                        <input
-                            type="file"
-                            accept="audio/*,video/*"
-                            onChange={(e) => setFile(e.target.files?.[0] || null)}
-                            style={inputStyle}
-                        />
-                    ) : (
-                        <input
-                            type="url"
-                            placeholder="https://youtube.com/..."
-                            value={url}
-                            onChange={(e) => setUrl(e.target.value)}
-                            style={inputStyle}
-                        />
-                    )}
+      if (!response.ok) {
+        throw new Error(getApiError(payload, "We couldn't start processing. Please try again."));
+      }
 
-                    <div style={{display: "flex", alignItems: "center", gap: 8}}>
-                        <label>Stems</label>
-                        <select
-                            value={stems}
-                            onChange={(e) => setStems(parseInt(e.target.value))}
-                            style={{padding: 6}}
-                        >
-                            <option value={2}>2 stems — Vocals + Instrumental</option>
-                            <option value={4}>4 stems — Vocals, Bass, Drums + Other</option>
-                            <option value={5}>5 stems — Vocals, Bass, Drums, Piano + Other</option>
-                        </select>
-                    </div>
-                </fieldset>
+      if (!payload || typeof payload !== "object" || typeof (payload as { job_id?: unknown }).job_id !== "string") {
+        throw new Error("The server returned an unexpected response. Please try again.");
+      }
 
-                {!formDisabled && (
-                    <button
-                        type="submit"
-                        disabled={loading || (mode === "upload" ? !file : !url.trim())}
-                        style={{
-                            marginLeft: "auto",
-                            background:
-                                loading || (mode === "upload" ? !file : !url.trim())
-                                    ? "#ccc"
-                                    : "#10b981",
-                            color: "#fff",
-                            padding: "8px 12px",
-                            border: "none",
-                            borderRadius: 6,
-                            cursor:
-                                loading || (mode === "upload" ? !file : !url.trim())
-                                    ? "not-allowed"
-                                    : "pointer",
-                        }}
-                    >
-                        {loading ? "Processing..." : "Process"}
-                    </button>
-                )}
-            </form>
+      setJobId((payload as { job_id: string }).job_id);
+      setStatus("queued");
+    } catch (error) {
+      const message = error instanceof Error && error.message === "Failed to fetch"
+        ? "Can't reach the processing server. Check that the backend is running, then try again."
+        : error instanceof Error ? error.message : "Something went wrong. Please try again.";
+      onError(message);
+    } finally {
+      setLoading(false);
+    }
+  }
 
-            {jobId && (
-                <ResultDisplay
-                    jobId={jobId}
-                    onStatusChange={(s) => setStatus(s)}
-                />
-            )}
+  return (
+    <div className="upload-flow">
+      <div className="mode-switch" role="tablist" aria-label="Choose audio source">
+        <button
+          type="button"
+          role="tab"
+          id="upload-tab"
+          aria-selected={mode === "upload"}
+          aria-controls="source-panel"
+          className={mode === "upload" ? "mode-tab is-active" : "mode-tab"}
+          disabled={formDisabled}
+          onClick={() => changeMode("upload")}
+        >
+          <span aria-hidden="true">↑</span> Upload a file
+        </button>
+        <button
+          type="button"
+          role="tab"
+          id="link-tab"
+          aria-selected={mode === "link"}
+          aria-controls="source-panel"
+          className={mode === "link" ? "mode-tab is-active" : "mode-tab"}
+          disabled={formDisabled}
+          onClick={() => changeMode("link")}
+        >
+          <span aria-hidden="true">↗</span> YouTube link
+        </button>
+      </div>
 
+      <form onSubmit={handleSubmit} className="upload-form" noValidate>
+        <div id="source-panel" role="tabpanel" aria-labelledby={mode === "upload" ? "upload-tab" : "link-tab"}>
+          {mode === "upload" ? (
+            <label className={file ? "file-dropzone has-file" : "file-dropzone"} htmlFor="audio-file">
+              <span className="dropzone-icon" aria-hidden="true">⇧</span>
+              <span className="dropzone-title">{file ? file.name : "Choose an audio or video file"}</span>
+              <span className="dropzone-copy">
+                {file ? `${(file.size / (1024 * 1024)).toFixed(1)} MB · Click to change file` : "MP3, WAV, FLAC, M4A, AAC, OGG, MP4, MOV, MKV or WEBM"}
+              </span>
+              <input
+                id="audio-file"
+                type="file"
+                accept=".mp3,.wav,.flac,.m4a,.aac,.ogg,.opus,.mp4,.mov,.mkv,.avi,.webm,audio/*,video/*"
+                onChange={(event) => {
+                  setFile(event.target.files?.[0] || null);
+                  onError("");
+                }}
+                disabled={formDisabled}
+                aria-describedby="file-help"
+              />
+            </label>
+          ) : (
+            <div className="field-group">
+              <label htmlFor="youtube-url">YouTube URL</label>
+              <input
+                id="youtube-url"
+                className="text-input"
+                type="url"
+                inputMode="url"
+                autoComplete="url"
+                placeholder="https://www.youtube.com/watch?v=..."
+                value={url}
+                onChange={(event) => {
+                  setUrl(event.target.value);
+                  onError("");
+                }}
+                disabled={formDisabled}
+                aria-invalid={Boolean(url.trim()) && !isSupportedYouTubeUrl(url.trim())}
+              />
+              <p className="field-help">Use a public video link that you’re allowed to download and process.</p>
+            </div>
+          )}
+          <p id="file-help" className="field-help">
+            {mode === "upload" ? "Maximum file size: 500 MB. Longer tracks may take more time." : " "}
+          </p>
+          {mode === "upload" && fileInvalid && (
+            <p className="inline-validation" role="alert">
+              {file.size > MAX_FILE_SIZE ? "File exceeds the 500 MB limit." : "That file extension may not be supported."}
+            </p>
+          )}
         </div>
-    );
+
+        <div className="form-bottom-row">
+          <div className="field-group stem-select-group">
+            <label htmlFor="stem-count">Separation quality</label>
+            <select
+              id="stem-count"
+              className="text-input stem-select"
+              value={stems}
+              onChange={(event) => setStems(Number(event.target.value))}
+              disabled={formDisabled}
+            >
+              <option value={2}>2 stems · Vocals + accompaniment</option>
+              <option value={4}>4 stems · Vocals, bass, drums, other</option>
+              <option value={5}>5 stems · Includes piano</option>
+            </select>
+          </div>
+          <button className="primary-button" type="submit" disabled={!canSubmit}>
+            {loading ? <><span className="button-spinner" aria-hidden="true" /> Starting…</> : processing ? "Processing…" : "Separate stems"}
+            {!loading && !processing && <span aria-hidden="true">→</span>}
+          </button>
+        </div>
+      </form>
+
+      {jobId && <ResultDisplay jobId={jobId} onStatusChange={handleStatusChange} />}
+    </div>
+  );
 }
