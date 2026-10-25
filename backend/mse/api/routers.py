@@ -27,6 +27,7 @@ feature_service = LibrosaFeatureExtractor()
 # Job tracking
 jobs = {}  # job_id -> {"status": str, "result": dict or None, "error": str or None, "pdf_path": str or None}
 connections = {}  # job_id -> list of WebSocket connections
+connection_loops = {}  # WebSocket -> owning ASGI event loop
 
 # Spleeter/TensorFlow is memory-intensive. Accept multiple client jobs, but run
 # model inference one job at a time in this process to avoid concurrent model
@@ -45,13 +46,17 @@ async def send_safe(ws: WebSocket, message: dict):
 def notify(job_id: str, message: dict):
     if job_id in connections:
         alive_connections = []
+        import asyncio
         for ws in connections[job_id]:
             try:
-                import asyncio
-                asyncio.run(send_safe(ws, message))
+                loop = connection_loops.get(ws)
+                if loop is None or loop.is_closed():
+                    connection_loops.pop(ws, None)
+                    continue
+                asyncio.run_coroutine_threadsafe(send_safe(ws, message), loop)
                 alive_connections.append(ws)
             except Exception:
-                pass
+                connection_loops.pop(ws, None)
         connections[job_id] = alive_connections
 
 
@@ -215,7 +220,9 @@ async def process(background_tasks: BackgroundTasks, stems: int = Form(...), you
 
 @router.websocket("/ws/status/{job_id}")
 async def websocket_status(ws: WebSocket, job_id: str):
+    import asyncio
     await ws.accept()
+    connection_loops[ws] = asyncio.get_running_loop()
     if job_id not in connections:
         connections[job_id] = []
     connections[job_id].append(ws)
@@ -232,6 +239,7 @@ async def websocket_status(ws: WebSocket, job_id: str):
         while True:
             await ws.receive_text()
     except WebSocketDisconnect:
+        connection_loops.pop(ws, None)
         if job_id in connections and ws in connections[job_id]:
             connections[job_id].remove(ws)
 
