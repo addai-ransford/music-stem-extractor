@@ -2,6 +2,7 @@ import mimetypes
 import os
 import shutil
 import tempfile
+import threading
 import uuid
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException, WebSocket, WebSocketDisconnect, BackgroundTasks
 from fastapi.responses import FileResponse, JSONResponse
@@ -26,6 +27,11 @@ feature_service = LibrosaFeatureExtractor()
 # Job tracking
 jobs = {}  # job_id -> {"status": str, "result": dict or None, "error": str or None, "pdf_path": str or None}
 connections = {}  # job_id -> list of WebSocket connections
+
+# Spleeter/TensorFlow is memory-intensive. Accept multiple client jobs, but run
+# model inference one job at a time in this process to avoid concurrent model
+# initialization exhausting Cloud Run memory.
+stem_extraction_lock = threading.Lock()
 
 
 # ---------------- Helper functions ----------------
@@ -67,9 +73,12 @@ def process_stems(job_id: str, stems: int, youtube_url: str = None, file_path: s
             raise ValueError("No input provided")
 
         # Step 2: Extract stems
-        jobs[job_id]["status"] = "extracting"
-        notify(job_id, {"status": "Extracting stems..."})
-        stems_folder = stem_service.extract(audio_file, stems)
+        jobs[job_id]["status"] = "queued"
+        notify(job_id, {"status": "Waiting for an available audio-processing slot..."})
+        with stem_extraction_lock:
+            jobs[job_id]["status"] = "extracting"
+            notify(job_id, {"status": "Extracting stems..."})
+            stems_folder = stem_service.extract(audio_file, stems)
 
         # Keep a private copy of the original mix for playback and chord analysis.
         original_audio = os.path.join(os.path.dirname(stems_folder), f"{job_id}_original_audio{os.path.splitext(audio_file)[1].lower()}")
