@@ -11,6 +11,7 @@ interface ChordTimelineProps {
   chords: ChordSegment[];
   currentTime: number;
   onSeek: (seconds: number) => void;
+  originalKey?: string | null;
 }
 
 const CHROMATIC_NOTES = ["C", "C♯", "D", "D♯", "E", "F", "F♯", "G", "G♯", "A", "A♯", "B"];
@@ -30,12 +31,20 @@ function transposeChord(chord: string, semitones: number): string {
   }).join("/");
 }
 
+function transposeKey(key: string | null | undefined, semitones: number): string {
+  if (!key || !semitones) return key || "—";
+  const match = key.match(/^([A-G](?:#|b)?)(.*)$/);
+  if (!match || NOTE_INDEX[match[1]] === undefined) return key;
+  const index = ((NOTE_INDEX[match[1]] + semitones) % 12 + 12) % 12;
+  return CHROMATIC_NOTES[index] + match[2];
+}
+
 function formatTime(seconds: number): string {
   const safe = Math.max(0, Math.floor(seconds));
   return `${Math.floor(safe / 60)}:${String(safe % 60).padStart(2, "0")}`;
 }
 
-export default function ChordTimeline({ chords, currentTime, onSeek }: ChordTimelineProps) {
+export default function ChordTimeline({ chords, currentTime, onSeek, originalKey }: ChordTimelineProps) {
   const [transpose, setTranspose] = useState(0);
   const timelineRef = useRef<HTMLDivElement | null>(null);
   const segmentRefs = useRef<Array<HTMLButtonElement | null>>([]);
@@ -76,6 +85,11 @@ export default function ChordTimeline({ chords, currentTime, onSeek }: ChordTime
         <span className="current-chord-time">
           {activeChord ? `${formatTime(activeChord.start)} – ${formatTime(activeChord.end)}` : "Play the song to follow along"}
         </span>
+      </div>
+
+      <div className="chord-key-summary" aria-label="Original and current key">
+        <div><span>ORIGINAL KEY</span><strong>{originalKey || "Not detected"}</strong></div>
+        <div><span>CURRENT KEY</span><strong>{transposeKey(originalKey, transpose)}</strong></div>
       </div>
 
       <div className="transpose-controls" aria-label="Transpose chord display">
