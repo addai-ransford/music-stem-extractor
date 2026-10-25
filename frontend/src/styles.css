@@ -432,3 +432,78 @@ input:disabled {
 }
 .chord-segment { box-sizing: border-box; flex-shrink: 0; white-space: nowrap; }
 .original-player-panel .original-audio-player { max-width: 100%; }
+
+
+/* Keep the original player and chord timeline readable on narrow screens. */
+.job-panel,
+.job-success,
+.track-session-heading,
+.original-player-panel,
+.chord-panel,
+.chord-panel-heading,
+.chord-panel-heading > div {
+  min-width: 0;
+  max-width: 100%;
+}
+.original-player-panel {
+  display: block;
+  width: 100%;
+  overflow: hidden;
+}
+.original-player-panel .original-audio-player {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  margin: 14px 0 18px;
+}
+.chord-panel {
+  width: 100%;
+  overflow: hidden;
+}
+.chord-timeline {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(64px, 1fr);
+  grid-template-rows: auto;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  padding: 8px 2px 12px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x proximity;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+}
+.chord-segment {
+  min-width: 64px;
+  max-width: 110px;
+  width: auto;
+  scroll-snap-align: start;
+}
+.stem-mixer,
+.mixer-track,
+.mixer-track-identity,
+.mixer-track-actions {
+  min-width: 0;
+  max-width: 100%;
+}
+.stem-audio {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+@media (max-width: 620px) {
+  .original-player-panel { padding: 14px 10px; }
+  .original-player-panel .original-audio-player { width: 100%; }
+  .chord-panel-heading { gap: 8px; }
+  .chord-panel-heading h4 { overflow-wrap: anywhere; }
+  .chord-timeline { grid-auto-columns: 68px; }
+  .chord-segment { min-width: 68px; }
+  .mixer-track { grid-template-columns: minmax(0, 1fr); }
+  .mixer-track-actions { width: 100%; }
+  .stem-audio { width: 100%; }
+}
