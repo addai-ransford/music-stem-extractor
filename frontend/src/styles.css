@@ -507,3 +507,55 @@ input:disabled {
   .mixer-track-actions { width: 100%; }
   .stem-audio { width: 100%; }
 }
+
+
+/* Make the currently playing chord unmistakable and keep it visible while scrolling. */
+.current-chord-card {
+  display: grid;
+  justify-items: center;
+  gap: 5px;
+  margin: 10px 0 12px;
+  padding: 15px 12px 13px;
+  border: 1px solid rgba(110,231,183,.32);
+  border-radius: 13px;
+  background: linear-gradient(135deg, rgba(16,185,129,.12), rgba(182,156,255,.07));
+  text-align: center;
+}
+.current-chord-caption {
+  color: #a7d8c3;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .16em;
+}
+.current-chord-name {
+  color: #d1fae5;
+  font: 700 clamp(34px, 8vw, 48px)/1.05 "Space Grotesk", sans-serif;
+  letter-spacing: -.04em;
+  text-shadow: 0 0 24px rgba(110,231,183,.14);
+  animation: chord-fade-in .24s ease-out both;
+}
+.current-chord-time {
+  color: #a6a2b9;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.chord-timeline {
+  scroll-behavior: smooth;
+  scrollbar-width: thin;
+}
+.chord-segment.is-active {
+  position: relative;
+  border-width: 2px;
+  border-color: #6ee7b7;
+  color: #ecfff6;
+  background: linear-gradient(145deg, rgba(16,185,129,.28), rgba(16,185,129,.12));
+  box-shadow: 0 0 0 2px rgba(110,231,183,.1), 0 5px 22px rgba(16,185,129,.12);
+}
+@keyframes chord-fade-in {
+  from { opacity: .45; transform: translateY(3px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .current-chord-name { animation: none; }
+  .chord-timeline { scroll-behavior: auto; }
+}
