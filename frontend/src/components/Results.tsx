@@ -306,7 +306,7 @@ export default function ResultDisplay({ jobId, onStatusChange }: ResultDisplayPr
               Your browser does not support audio playback.
             </audio>
             {chordWarning && <p className="chord-disclaimer" role="status">{chordWarning}</p>}
-            <ChordTimeline chords={chords} currentTime={currentTime} onSeek={seekToChord} />
+            <ChordTimeline chords={chords} currentTime={currentTime} onSeek={seekToChord} originalKey={detectedKey} />
           </section>
           <div className="stem-mixer" aria-busy={filesLoading}>
             <div className="mixer-header"><span>TRACK</span><span>PREVIEW & EXPORT</span></div>
