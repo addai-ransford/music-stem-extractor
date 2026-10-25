@@ -408,3 +408,27 @@ input:disabled {
   .chord-segment { min-width: 65px; padding: 10px 9px 8px; }
   .chord-segment strong { font-size: 16px; }
 }
+
+/* Prevent the chord timeline from expanding beyond the results card or viewport. */
+.original-player-panel, .chord-panel {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+.chord-panel { overflow: hidden; }
+.chord-panel-heading, .chord-panel-heading > div { min-width: 0; }
+.chord-timeline {
+  box-sizing: border-box;
+  display: flex;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x pan-y;
+}
+.chord-segment { box-sizing: border-box; flex-shrink: 0; white-space: nowrap; }
+.original-player-panel .original-audio-player { max-width: 100%; }
