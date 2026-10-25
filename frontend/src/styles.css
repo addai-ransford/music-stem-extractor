@@ -614,3 +614,9 @@ input:disabled {
   .transpose-stepper { width: 100%; justify-content: space-between; gap: 5px; }
   .transpose-stepper > strong { min-width: 0; flex: 1; }
 }
+
+
+.chord-key-summary { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 12px 0; }
+.chord-key-summary > div { display: flex; flex-direction: column; gap: 5px; padding: 12px 14px; border: 1px solid var(--border, rgba(127, 127, 150, 0.2)); border-radius: 12px; background: var(--surface-muted, rgba(127, 127, 150, 0.06)); }
+.chord-key-summary span { color: #817d93; font-size: 10px; font-weight: 700; letter-spacing: .08em; }
+.chord-key-summary strong { font-size: 20px; line-height: 1.2; }
