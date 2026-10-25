@@ -1,5 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from pathlib import Path
 from backend.mse.api import routers
 
 app = FastAPI(title="Music Stem Extractor API")
@@ -13,3 +15,8 @@ app.add_middleware(
 )
 
 app.include_router(routers.router)
+
+# Serve the production-built React app from the same Cloud Run service.
+_frontend_dist = Path(__file__).resolve().parents[3] / "frontend" / "dist"
+if _frontend_dist.is_dir():
+    app.mount("/", StaticFiles(directory=str(_frontend_dist), html=True), name="frontend")
