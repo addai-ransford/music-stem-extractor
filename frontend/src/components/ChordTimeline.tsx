@@ -39,6 +39,76 @@ function transposeKey(key: string | null | undefined, semitones: number): string
   return CHROMATIC_NOTES[index] + match[2];
 }
 
+
+function chordKeyboardInfo(chord: string, transpose: number) {
+  if (!chord || chord === "N" || chord === "N.C." || chord === "—") {
+    return { notes: [] as string[], inversion: "No chord detected", bass: "" };
+  }
+  const parts = chord.split("/");
+  const match = parts[0].match(/^([A-G](?:#|b)?)(.*)$/);
+  if (!match || NOTE_INDEX[match[1]] === undefined) {
+    return { notes: [] as string[], inversion: "Inversion unavailable", bass: "" };
+  }
+  const root = NOTE_INDEX[match[1]];
+  const quality = match[2].toLowerCase();
+  let intervals = [0, 4, 7];
+  if (quality.startsWith("m") && !quality.startsWith("maj")) intervals = [0, 3, 7];
+  if (quality.includes("dim")) intervals = [0, 3, 6];
+  else if (quality.includes("aug") || quality.includes("+")) intervals = [0, 4, 8];
+  else if (quality.includes("sus2")) intervals = [0, 2, 7];
+  else if (quality.includes("sus4") || quality === "sus") intervals = [0, 5, 7];
+  else if (quality.includes("7")) intervals = quality.includes("maj7") ? [0, 4, 7, 11] : quality.includes("dim7") ? [0, 3, 6, 9] : [0, 4, 7, 10];
+  const notes = [...new Set(intervals.map((interval) => CHROMATIC_NOTES[((root + interval + transpose) % 12 + 12) % 12]))];
+  const bassMatch = parts.length > 1 ? parts[1].match(/^([A-G](?:#|b)?)/) : null;
+  const bassIndex = bassMatch && NOTE_INDEX[bassMatch[1]] !== undefined
+    ? (NOTE_INDEX[bassMatch[1]] + transpose + 12) % 12
+    : null;
+  const rootTransposed = (root + transpose + 12) % 12;
+  let inversion = "Inversion not detected";
+  if (bassIndex !== null) {
+    const chordToneIndex = intervals.findIndex((interval) => (root + interval) % 12 === NOTE_INDEX[bassMatch![1]]);
+    inversion = chordToneIndex === 0 ? "Root position (slash bass)" :
+      chordToneIndex === 1 ? "1st inversion (slash bass)" :
+      chordToneIndex === 2 ? "2nd inversion (slash bass)" :
+      "Slash bass detected; inversion uncertain";
+  } else if (bassIndex === null && parts.length > 1) {
+    inversion = "Slash bass detected; inversion uncertain";
+  }
+  return { notes, inversion, bass: bassIndex === null ? "" : CHROMATIC_NOTES[bassIndex], root: CHROMATIC_NOTES[rootTransposed] };
+}
+
+function PianoKeyboard({ chord, transpose }: { chord: string; transpose: number }) {
+  const info = chordKeyboardInfo(chord, transpose);
+  const whiteNotes = ["C", "D", "E", "F", "G", "A", "B"];
+  const blackNotes = [
+    { note: "C♯", left: 1 / 7 }, { note: "D♯", left: 2 / 7 },
+    { note: "F♯", left: 4 / 7 }, { note: "G♯", left: 5 / 7 }, { note: "A♯", left: 6 / 7 },
+  ];
+  const keyLabel = (note: string) => {
+    const normalized = note.replace("♯", "#");
+    return info.notes.some((item) => item.replace("♯", "#") === normalized);
+  };
+  return (
+    <div className="current-chord-keyboard" aria-label={`Piano keyboard for current chord ${chord}`}>
+      <div className="keyboard-heading">
+        <span>NOTES IN THIS CHORD</span>
+        <strong>{info.notes.length ? info.notes.join(" · ") : "Notes unavailable"}</strong>
+      </div>
+      <div className="piano-keys" role="img" aria-label={info.notes.length ? `Highlighted notes: ${info.notes.join(", ")}` : "No notes highlighted"}>
+        {whiteNotes.map((note) => {
+          const highlighted = keyLabel(note);
+          return <div className={highlighted ? "piano-key white-key is-highlighted" : "piano-key white-key"} key={note}><span>{note}</span></div>;
+        })}
+        {blackNotes.map(({ note, left }) => {
+          const highlighted = keyLabel(note);
+          return <div key={note} className={highlighted ? "piano-key black-key is-highlighted" : "piano-key black-key"} style={{ left: `calc(${left * 100}% - 4.5%)` }}><span>{note}</span></div>;
+        })}
+      </div>
+      <p className="keyboard-inversion">{info.inversion}{info.bass ? ` · Bass: ${info.bass}` : ""}</p>
+    </div>
+  );
+}
+
 function formatTime(seconds: number): string {
   const safe = Math.max(0, Math.floor(seconds));
   return `${Math.floor(safe / 60)}:${String(safe % 60).padStart(2, "0")}`;
@@ -86,6 +156,8 @@ export default function ChordTimeline({ chords, currentTime, onSeek, originalKey
           {activeChord ? `${formatTime(activeChord.start)} – ${formatTime(activeChord.end)}` : "Play the song to follow along"}
         </span>
       </div>
+
+      {activeChord && <PianoKeyboard chord={activeChord.chord} transpose={transpose} />}
 
       <div className="chord-key-summary" aria-label="Original and current key">
         <div><span>ORIGINAL KEY</span><strong>{originalKey || "Not detected"}</strong></div>
