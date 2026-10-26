@@ -317,41 +317,11 @@ export default function ResultDisplay({ jobId, onStatusChange }: ResultDisplayPr
             <>
               <StudioMixer stems={stemFiles.flatMap((stem) => {
                 const url = getStemDownloadUrl(stem.url);
-                return url ? [{ name: stem.name, url }] : [];
+                return url ? [{ name: stem.name, url, downloadUrl: url }] : [];
               })} seekRequest={mixerSeekRequest} onTimeChange={setCurrentTime} />
               <KeyboardStudio currentTime={currentTime} />
             </>
           )}
-          <div className="stem-mixer" aria-busy={filesLoading}>
-            <div className="mixer-header"><span>TRACK</span><span>PREVIEW & EXPORT</span></div>
-            {filesLoading && <p className="muted-message" role="status">Loading your WAV files…</p>}
-            {!filesLoading && stemFiles.length === 0 && (
-              <p className="muted-message" role="status">{error || "No individual stem files were returned. You can try the full ZIP archive."}</p>
-            )}
-            {stemFiles.map((stem, index) => {
-              const downloadUrl = getStemDownloadUrl(stem.url);
-              const stemName = stem.name.replace(/\.wav$/i, "").replace(/[_-]/g, " ");
-              const trackStyle = ["vocal", "drums", "bass", "other", "piano"][index % 5];
-              return (
-                <article className={`mixer-track track-${trackStyle}`} key={stem.name}>
-                  <div className="mixer-track-identity">
-                    <span className="track-color-mark" aria-hidden="true"><span /></span>
-                    <div className="stem-file-info"><strong>{stemName}</strong><small>WAV · Individual stem</small></div>
-                  </div>
-                  <div className="mixer-track-actions">
-                    {downloadUrl ? (
-                      <>
-                        <audio className="stem-audio" controls preload="none" src={downloadUrl} aria-label={`Preview ${stemName}`}>
-                          Your browser does not support audio playback.
-                        </audio>
-                        <a className="stem-download-action" href={downloadUrl} download={stem.name} aria-label={`Download ${stem.name}`} title="Download stem">↓</a>
-                      </>
-                    ) : <span className="stem-download-action" aria-label="Download unavailable">Unavailable</span>}
-                  </div>
-                </article>
-              );
-            })}
-          </div>
           <button className="secondary-button download-all-button" type="button" onClick={downloadZip}>
             <span aria-hidden="true">⇩</span> Download all stems (.ZIP)
           </button>
