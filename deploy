@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+# One-command deploy to Google Cloud Run.
+# Optional overrides:
+#   PROJECT_ID=my-project REGION=europe-west1 SERVICE=music-stem-extractor ./deploy
+
+PROJECT_ID="${PROJECT_ID:-$(gcloud config get-value project 2>/dev/null || true)}"
+REGION="${REGION:-europe-west1}"
+SERVICE="${SERVICE:-music-stem-extractor}"
+
+if ! command -v gcloud >/dev/null 2>&1; then
+  echo "ERROR: Google Cloud CLI (gcloud) is required. Install it from https://cloud.google.com/sdk/docs/install" >&2
+  exit 1
+fi
+if [[ -z "${PROJECT_ID}" || "${PROJECT_ID}" == "(unset)" ]]; then
+  echo "ERROR: No Google Cloud project configured. Run: gcloud config set project YOUR_PROJECT_ID" >&2
+  echo "Or run: PROJECT_ID=YOUR_PROJECT_ID ./deploy" >&2
+  exit 1
+fi
+
+echo "Deploying ${SERVICE} to Cloud Run in ${REGION} (project ${PROJECT_ID})..."
+gcloud services enable run.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com --project "${PROJECT_ID}"
+gcloud run deploy "${SERVICE}" \
+  --source . \
+  --project "${PROJECT_ID}" \
+  --region "${REGION}" \
+  --platform managed \
+  --allow-unauthenticated \
+  --memory 4Gi \
+  --cpu 2 \
+  --timeout 3600 \
+  --concurrency 10 \
+  --max 1 \
+  --min 0 \
+  --cpu-boost \
+  --no-cpu-throttling \
+  --set-env-vars "PYTHONUNBUFFERED=1"
+
+echo
+echo "Deployment finished. Service URL:"
+gcloud run services describe "${SERVICE}" --project "${PROJECT_ID}" --region "${REGION}" --format='value(status.url)'

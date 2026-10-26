@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import ResultDisplay from "./Results";
 
 interface UploadFormProps {
@@ -7,7 +7,7 @@ interface UploadFormProps {
 
 type InputMode = "upload" | "link";
 
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "http://localhost:8000").replace(/\/$/, "");
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || window.location.origin).replace(/\/$/, "");
 const MAX_FILE_SIZE = 500 * 1024 * 1024;
 const ACCEPTED_EXTENSIONS = /\.(mp3|wav|flac|m4a|aac|ogg|opus|mp4|mov|mkv|avi|webm)$/i;
 
@@ -25,8 +25,11 @@ function isSupportedYouTubeUrl(value: string): boolean {
   try {
     const parsed = new URL(value);
     const host = parsed.hostname.toLowerCase().replace(/^www\./, "");
-    return ["youtube.com", "m.youtube.com", "music.youtube.com", "youtu.be"].includes(host)
-      && (host !== "youtu.be" || parsed.pathname.length > 1);
+    if (parsed.username || parsed.password) return false;
+    if (!["youtube.com", "m.youtube.com", "music.youtube.com", "youtu.be"].includes(host)) return false;
+    if (host === "youtu.be") return parsed.pathname.split("/").filter(Boolean).length === 1;
+    return parsed.pathname === "/watch" ? Boolean(parsed.searchParams.get("v"))
+      : /^\/(shorts|live|embed)\/[^/]+/.test(parsed.pathname) || parsed.pathname === "/playlist" && Boolean(parsed.searchParams.get("list"));
   } catch {
     return false;
   }
@@ -40,6 +43,17 @@ export default function UploadForm({ onError }: UploadFormProps) {
   const [loading, setLoading] = useState(false);
   const [jobId, setJobId] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!file || mode !== "upload") {
+      setPreviewUrl(null);
+      return;
+    }
+    const objectUrl = URL.createObjectURL(file);
+    setPreviewUrl(objectUrl);
+    return () => URL.revokeObjectURL(objectUrl);
+  }, [file, mode]);
 
   const handleStatusChange = useCallback((nextStatus: string) => {
     setStatus(nextStatus);
@@ -72,7 +86,7 @@ export default function UploadForm({ onError }: UploadFormProps) {
       onError("This file type is not supported. Try MP3, WAV, FLAC, M4A, AAC, OGG, MP4, MOV, MKV, or WEBM.");
       return;
     }
-    if (file && file.size > MAX_FILE_SIZE) {
+    if (mode === "upload" && file && file.size > MAX_FILE_SIZE) {
       onError("This file is larger than the 500 MB upload limit.");
       return;
     }
@@ -111,7 +125,7 @@ export default function UploadForm({ onError }: UploadFormProps) {
   }
 
   return (
-    <div className="upload-flow">
+    <div className="upload-flow" aria-busy={loading || processing}>
       <div className="mode-switch" role="tablist" aria-label="Choose audio source">
         <button
           type="button"
@@ -179,6 +193,15 @@ export default function UploadForm({ onError }: UploadFormProps) {
                 aria-invalid={Boolean(url.trim()) && !isSupportedYouTubeUrl(url.trim())}
               />
               <p className="field-help">Use a public video link that you’re allowed to download and process.</p>
+            </div>
+          )}
+          {mode === "upload" && previewUrl && (
+            <div className="source-preview">
+              <p className="eyebrow">SOURCE PREVIEW</p>
+              <audio className="original-audio-player" controls preload="metadata" src={previewUrl}>
+                Your browser does not support audio playback.
+              </audio>
+              <p className="field-help">Preview the original file before processing. Chords will be shown on the results screen.</p>
             </div>
           )}
           <p id="file-help" className="field-help">

@@ -1,4 +1,8 @@
+import mimetypes
 import os
+import shutil
+import tempfile
+import threading
 import uuid
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException, WebSocket, WebSocketDisconnect, BackgroundTasks
 from fastapi.responses import FileResponse, JSONResponse
@@ -11,6 +15,10 @@ from backend.mse.utils.audio_utils import extract_audio_from_video, safe_zip_fol
 
 router = APIRouter()
 
+MAX_UPLOAD_BYTES = 500 * 1024 * 1024
+ALLOWED_UPLOAD_EXTENSIONS = {".mp3", ".wav", ".flac", ".m4a", ".aac", ".ogg", ".opus", ".mp4", ".mov", ".mkv", ".avi", ".webm"}
+UPLOAD_CHUNK_BYTES = 1024 * 1024
+
 # Services
 stem_service = SpleeterStemExtractor()
 yt_service = YTDLDownloader()
@@ -19,6 +27,12 @@ feature_service = LibrosaFeatureExtractor()
 # Job tracking
 jobs = {}  # job_id -> {"status": str, "result": dict or None, "error": str or None, "pdf_path": str or None}
 connections = {}  # job_id -> list of WebSocket connections
+connection_loops = {}  # WebSocket -> owning ASGI event loop
+
+# Spleeter/TensorFlow is memory-intensive. Accept multiple client jobs, but run
+# model inference one job at a time in this process to avoid concurrent model
+# initialization exhausting Cloud Run memory.
+stem_extraction_lock = threading.Lock()
 
 
 # ---------------- Helper functions ----------------
@@ -32,13 +46,17 @@ async def send_safe(ws: WebSocket, message: dict):
 def notify(job_id: str, message: dict):
     if job_id in connections:
         alive_connections = []
+        import asyncio
         for ws in connections[job_id]:
             try:
-                import asyncio
-                asyncio.run(send_safe(ws, message))
+                loop = connection_loops.get(ws)
+                if loop is None or loop.is_closed():
+                    connection_loops.pop(ws, None)
+                    continue
+                asyncio.run_coroutine_threadsafe(send_safe(ws, message), loop)
                 alive_connections.append(ws)
             except Exception:
-                pass
+                connection_loops.pop(ws, None)
         connections[job_id] = alive_connections
 
 
@@ -60,15 +78,32 @@ def process_stems(job_id: str, stems: int, youtube_url: str = None, file_path: s
             raise ValueError("No input provided")
 
         # Step 2: Extract stems
-        jobs[job_id]["status"] = "extracting"
-        notify(job_id, {"status": "Extracting stems..."})
-        stems_folder = stem_service.extract(audio_file, stems)
+        jobs[job_id]["status"] = "queued"
+        notify(job_id, {"status": "Waiting for an available audio-processing slot..."})
+        with stem_extraction_lock:
+            jobs[job_id]["status"] = "extracting"
+            notify(job_id, {"status": "Extracting stems..."})
+            stems_folder = stem_service.extract(audio_file, stems)
+
+        # Keep a private copy of the original mix for playback and chord analysis.
+        original_audio = os.path.join(os.path.dirname(stems_folder), f"{job_id}_original_audio{os.path.splitext(audio_file)[1].lower()}")
+        if os.path.abspath(audio_file) != os.path.abspath(original_audio):
+            shutil.copy2(audio_file, original_audio)
 
         # Step 3: Detect key (always fast)
         jobs[job_id]["status"] = "key"
         notify(job_id, {"status": "Detecting key..."})
         instrumental = build_instrumental(stems_folder, stems)
         key = feature_service.detect_key(instrumental)
+
+        # Detect chords from the original full mix (not separated accompaniment).
+        jobs[job_id]["status"] = "chords"
+        notify(job_id, {"status": "Detecting chords from the full song..."})
+        try:
+            chords = feature_service.extract_chords(original_audio)
+        except Exception as chord_error:
+            chords = []
+            jobs[job_id]["chords_error"] = str(chord_error)
 
         # Zip stems
         jobs[job_id]["status"] = "zipping"
@@ -82,7 +117,9 @@ def process_stems(job_id: str, stems: int, youtube_url: str = None, file_path: s
             "stems_zip": zip_file,
             "key": key,
             "stems_folder": stems_folder,
-            "instrumental": instrumental
+            "instrumental": instrumental,
+            "original_audio": original_audio,
+            "chords": chords
         }
         jobs[job_id]["pdf_path"] = None
         notify(job_id, {"status": "done", "result": jobs[job_id]["result"]})
@@ -91,6 +128,13 @@ def process_stems(job_id: str, stems: int, youtube_url: str = None, file_path: s
         jobs[job_id]["status"] = "error"
         jobs[job_id]["error"] = str(e)
         notify(job_id, {"status": "error", "error": str(e)})
+    finally:
+        # Uploaded source files are temporary; never leave user uploads behind.
+        if file_path and os.path.isfile(file_path):
+            try:
+                os.remove(file_path)
+            except OSError:
+                pass
 
 
 # ---------------- Analyze PDF ----------------
@@ -108,7 +152,8 @@ def analyze_pdf(job_id: str):
         notify(job_id, {"status": "Generating PDF..."})
 
         # Extract chords & solfège
-        chords = feature_service.extract_chords(instrumental)
+        original_audio = job["result"].get("original_audio", instrumental)
+        chords = feature_service.extract_chords(original_audio)
         melody = feature_service.extract_melody(vocals)
 
         pdf_path = os.path.join(stems_folder, "analysis.pdf")
@@ -139,9 +184,35 @@ async def process(background_tasks: BackgroundTasks, stems: int = Form(...), you
 
     file_path = None
     if file:
-        file_path = f"/tmp/{file.filename}"
-        with open(file_path, "wb") as f:
-            f.write(await file.read())
+        # Never use a client-supplied filename as a filesystem path.
+        extension = os.path.splitext(os.path.basename(file.filename or ""))[1].lower()
+        if extension not in ALLOWED_UPLOAD_EXTENSIONS:
+            raise HTTPException(status_code=400, detail="Unsupported file type.")
+
+        temp_file = tempfile.NamedTemporaryFile(
+            prefix=f"mse-{job_id}-",
+            suffix=extension,
+            dir="/tmp",
+            delete=False,
+        )
+        file_path = temp_file.name
+        total_bytes = 0
+        try:
+            with temp_file:
+                while True:
+                    chunk = await file.read(UPLOAD_CHUNK_BYTES)
+                    if not chunk:
+                        break
+                    total_bytes += len(chunk)
+                    if total_bytes > MAX_UPLOAD_BYTES:
+                        raise HTTPException(status_code=413, detail="File exceeds the 500 MB upload limit.")
+                    temp_file.write(chunk)
+        except Exception:
+            if file_path and os.path.isfile(file_path):
+                os.remove(file_path)
+            raise
+        finally:
+            await file.close()
 
     background_tasks.add_task(process_stems, job_id, stems, youtube_url, file_path)
     return JSONResponse({"job_id": job_id})
@@ -149,7 +220,9 @@ async def process(background_tasks: BackgroundTasks, stems: int = Form(...), you
 
 @router.websocket("/ws/status/{job_id}")
 async def websocket_status(ws: WebSocket, job_id: str):
+    import asyncio
     await ws.accept()
+    connection_loops[ws] = asyncio.get_running_loop()
     if job_id not in connections:
         connections[job_id] = []
     connections[job_id].append(ws)
@@ -166,8 +239,34 @@ async def websocket_status(ws: WebSocket, job_id: str):
         while True:
             await ws.receive_text()
     except WebSocketDisconnect:
+        connection_loops.pop(ws, None)
         if job_id in connections and ws in connections[job_id]:
             connections[job_id].remove(ws)
+
+
+@router.get("/audio/{job_id}")
+def get_original_audio(job_id: str):
+    """Stream the preserved original mix used for chord detection."""
+    job = jobs.get(job_id)
+    if not job or not job.get("result"):
+        raise HTTPException(status_code=404, detail="Audio not found")
+    audio_path = job["result"].get("original_audio")
+    if not audio_path or not os.path.isfile(audio_path):
+        raise HTTPException(status_code=404, detail="Original audio file not found")
+    return FileResponse(audio_path, media_type=mimetypes.guess_type(audio_path)[0] or "application/octet-stream", filename=os.path.basename(audio_path))
+
+
+@router.get("/chords/{job_id}")
+def get_chords(job_id: str):
+    """Return timestamped chord segments detected from the original full song."""
+    job = jobs.get(job_id)
+    if not job or not job.get("result"):
+        raise HTTPException(status_code=404, detail="Chords are not available yet")
+    return {
+        "chords": job["result"].get("chords", []),
+        "audio_url": f"/audio/{job_id}",
+        "warning": job.get("chords_error"),
+    }
 
 
 @router.get("/stems/{job_id}")
@@ -184,6 +283,7 @@ def list_stems(job_id: str):
         if name.lower().endswith(".wav")
         and os.path.isfile(os.path.join(stems_folder, name))
         and name != "instrumental.wav"
+        and not name.lower().startswith("original_audio")
     )
     return {"stems": [{"name": name, "url": f"/download/stems/{job_id}/{name}"} for name in files]}
 
