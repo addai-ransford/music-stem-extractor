@@ -245,7 +245,7 @@ export default function KeyboardStudio({ currentTime }: KeyboardStudioProps) {
         {BLACK_NOTES.map(({ note, left }) => {
           const midiNote = 48 + note;
           return <button key={note} type="button" className={`keyboard-piano-key black-piano-key${pressedNotes.includes(midiNote) ? " is-pressed" : ""}`}
-            style={{ left: `${(left / 2) * 100}%` }} aria-label={`Play ${noteName(midiNote)}`}
+            style={{ left: `${((left * 7 + 0.5) / 15) * 100}%` }} aria-label={`Play ${noteName(midiNote)}`}
             onPointerDown={event => { event.preventDefault(); noteOn(midiNote); }} onPointerUp={() => noteOff(midiNote)}
             onPointerLeave={() => noteOff(midiNote)} onPointerCancel={() => noteOff(midiNote)}>{NOTE_NAMES[note % 12]}</button>;
         })}
