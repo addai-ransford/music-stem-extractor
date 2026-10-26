@@ -29,7 +29,7 @@ function encodeVariableLength(value: number): number[] {
   return bytes;
 }
 function makeMidiFile(events: RecordedEvent[]): Blob {
-  const sorted = [...events].sort((a, b) => a.time - b.time || Number(a.on) - Number(b.on));
+  const sorted = [...events].sort((a, b) => a.time - b.time || Number(b.on) - Number(a.on));
   const ticksPerSecond = 1920;
   let previousTick = 0;
   const track: number[] = [];
