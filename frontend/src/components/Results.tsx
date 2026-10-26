@@ -80,6 +80,7 @@ export default function ResultDisplay({ jobId, onStatusChange }: ResultDisplayPr
   const [chords, setChords] = useState<ChordSegment[]>([]);
   const [chordWarning, setChordWarning] = useState("");
   const [currentTime, setCurrentTime] = useState(0);
+  const [mixerSeekRequest, setMixerSeekRequest] = useState<{ time: number; token: number } | null>(null);
   const originalAudioRef = useRef<HTMLAudioElement | null>(null);
   const terminalStatusRef = useRef(false);
   const statusCallbackRef = useRef(onStatusChange);
@@ -251,10 +252,12 @@ export default function ResultDisplay({ jobId, onStatusChange }: ResultDisplayPr
   }, [jobId, status]);
 
   const seekToChord = (seconds: number) => {
-    if (!originalAudioRef.current) return;
-    originalAudioRef.current.currentTime = seconds;
     setCurrentTime(seconds);
-    void originalAudioRef.current.play().catch(() => undefined);
+    setMixerSeekRequest((previous) => ({ time: seconds, token: (previous?.token ?? 0) + 1 }));
+    if (originalAudioRef.current) {
+      originalAudioRef.current.currentTime = seconds;
+      void originalAudioRef.current.play().catch(() => undefined);
+    }
   };
 
   const downloadZip = () => {
@@ -313,7 +316,7 @@ export default function ResultDisplay({ jobId, onStatusChange }: ResultDisplayPr
             <StudioMixer stems={stemFiles.flatMap((stem) => {
               const url = getStemDownloadUrl(stem.url);
               return url ? [{ name: stem.name, url }] : [];
-            })} />
+            })} seekRequest={mixerSeekRequest} onTimeChange={setCurrentTime} />
           )}
           <div className="stem-mixer" aria-busy={filesLoading}>
             <div className="mixer-header"><span>TRACK</span><span>PREVIEW & EXPORT</span></div>
