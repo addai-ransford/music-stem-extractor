@@ -27,6 +27,11 @@ const labelFor = (name: string) => name.replace(/\.wav$/i, "").replace(/[_-]/g, 
 
 export default function StudioMixer({ stems, seekRequest, onTimeChange }: StudioMixerProps) {
   const audioRefs = useRef<Array<HTMLAudioElement | null>>([]);
+  const onTimeChangeRef = useRef(onTimeChange);
+
+  useEffect(() => {
+    onTimeChangeRef.current = onTimeChange;
+  }, [onTimeChange]);
   const [tracks, setTracks] = useState<Record<string, TrackState>>({});
   const [playing, setPlaying] = useState(false);
   const [duration, setDuration] = useState(0);
@@ -72,8 +77,8 @@ export default function StudioMixer({ stems, seekRequest, onTimeChange }: Studio
       }
     });
     setCurrentTime(time);
-    onTimeChange?.(time);
-  }, [onTimeChange]);
+    onTimeChangeRef.current?.(time);
+  }, []);
 
   useEffect(() => {
     if (!seekRequest) return;
@@ -110,7 +115,7 @@ export default function StudioMixer({ stems, seekRequest, onTimeChange }: Studio
 
   const syncTime = (source: HTMLAudioElement) => {
     setCurrentTime(source.currentTime);
-    onTimeChange?.(source.currentTime);
+    onTimeChangeRef.current?.(source.currentTime);
     audioRefs.current.forEach((audio) => {
       if (!audio || audio === source || audio.paused || !Number.isFinite(audio.duration)) return;
       if (Math.abs(audio.currentTime - source.currentTime) > 0.22) {
@@ -188,7 +193,7 @@ export default function StudioMixer({ stems, seekRequest, onTimeChange }: Studio
                       if (playing) void item.play().catch(() => undefined);
                     });
                     setCurrentTime(0);
-                    onTimeChange?.(0);
+                    onTimeChangeRef.current?.(0);
                   }
                 }}
                 onEnded={() => {
