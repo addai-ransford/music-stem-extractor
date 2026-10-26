@@ -1,15 +1,7 @@
 #!/bin/bash
-# -----------------------------------------------------------------------------
-# Script Name: run.sh
-# Description: Safely run FastAPI backend and React Vite frontend with:
-#              - auto cleanup of backend data directory
-#              - stopping any process on backend or frontend ports
-#              - building and previewing the frontend
-# Author: Ransford Addai
-# Date: 2025-09-17
-# -----------------------------------------------------------------------------
+# Run FastAPI backend and React Vite frontend.
+set -e
 
-# ----------------- Configuration -----------------
 APP_MODULE="${APP_MODULE:-backend.mse.api.api:app}"
 BACKEND_PORT="${BACKEND_PORT:-8000}"
 FRONTEND_DIR="${FRONTEND_DIR:-frontend}"
@@ -20,37 +12,38 @@ HOST="${HOST:-0.0.0.0}"
 echo "Backend APP_MODULE=$APP_MODULE, PORT=$BACKEND_PORT, DATA_DIR=$DATA_DIR"
 echo "Frontend DIR=$FRONTEND_DIR, PORT=$FRONTEND_PORT"
 
-# ----------------- Functions -----------------
 stop_port() {
-    local port=$1
+    local port="$1"
     echo "Stopping any process on port $port..."
-    lsof -ti:"$port" | xargs -r kill
-    echo "Waiting for port $port to be freed..."
-    sleep 2
+    # macOS/BSD xargs does not support GNU xargs -r; avoid invoking kill with no PID.
+    local pids
+    pids="$(lsof -ti:"$port" 2>/dev/null || true)"
+    if [ -n "$pids" ]; then
+        echo "$pids" | while IFS= read -r pid; do
+            [ -n "$pid" ] && kill "$pid" 2>/dev/null || true
+        done
+    fi
+    sleep 1
 }
 
 clean_data_dir() {
-    if [ -d "$DATA_DIR" ]; then
-        echo "Cleaning up $DATA_DIR..."
-        rm -rf "${DATA_DIR:?}"/*
-    else
-        echo "Data directory $DATA_DIR does not exist. Creating..."
-        mkdir -p "$DATA_DIR"
-    fi
+    mkdir -p "$DATA_DIR"
+    # Preserve the directory itself; remove its contents safely.
+    find "$DATA_DIR" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
 }
 
 build_frontend() {
-    if [ -d "$FRONTEND_DIR" ]; then
-        echo "Building and previewing frontend..."
-        cd "$FRONTEND_DIR" || exit
-        npm install
-        stop_port "$FRONTEND_PORT"
-        npm run build
-        npm run preview &
-        cd - || exit
-    else
-        echo "Frontend directory $FRONTEND_DIR does not exist."
+    if [ ! -d "$FRONTEND_DIR" ]; then
+        echo "Frontend directory '$FRONTEND_DIR' does not exist." >&2
+        return 1
     fi
+    echo "Installing and building frontend..."
+    cd "$FRONTEND_DIR"
+    npm install
+    stop_port "$FRONTEND_PORT"
+    npm run build
+    npm run preview -- --host 0.0.0.0 &
+    cd - >/dev/null
 }
 
 start_backend() {
@@ -58,7 +51,6 @@ start_backend() {
     uvicorn "$APP_MODULE" --reload --host "$HOST" --port "$BACKEND_PORT"
 }
 
-# ----------------- Main -----------------
 main() {
     stop_port "$BACKEND_PORT"
     clean_data_dir
@@ -66,5 +58,4 @@ main() {
     start_backend
 }
 
-# Execute main
-main
+main "$@"

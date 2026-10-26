@@ -79,9 +79,10 @@ def process_stems(job_id: str, stems: int, youtube_url: str = None, file_path: s
 
         jobs[job_id]["status"] = "done"
         jobs[job_id]["result"] = {
-            "stems_zip": stems_url,
+            "stems_zip": zip_file,
             "key": key,
-            "stems_folder": stems_folder
+            "stems_folder": stems_folder,
+            "instrumental": instrumental
         }
         jobs[job_id]["pdf_path"] = None
         notify(job_id, {"status": "done", "result": jobs[job_id]["result"]})
@@ -100,7 +101,7 @@ def analyze_pdf(job_id: str):
             raise ValueError("Stems not available yet")
 
         stems_folder = job["result"]["stems_folder"]
-        instrumental = f"{stems_folder}/accompaniment.wav"
+        instrumental = job["result"].get("instrumental", f"{stems_folder}/accompaniment.wav")
         vocals = f"{stems_folder}/vocals.wav"
 
         jobs[job_id]["status"] = "analyzing"
@@ -128,8 +129,8 @@ def analyze_pdf(job_id: str):
 @router.post("/process")
 async def process(background_tasks: BackgroundTasks, stems: int = Form(...), youtube_url: str = Form(None),
                   file: UploadFile = File(None)):
-    if stems not in (2, 3, 4):
-        raise HTTPException(status_code=400, detail="stems must be 2, 3, or 4")
+    if stems not in (2, 4, 5):
+        raise HTTPException(status_code=400, detail="stems must be 2, 4, or 5")
     if youtube_url and file:
         raise HTTPException(status_code=400, detail="Provide either youtube_url or file, not both")
 
@@ -167,6 +168,39 @@ async def websocket_status(ws: WebSocket, job_id: str):
     except WebSocketDisconnect:
         if job_id in connections and ws in connections[job_id]:
             connections[job_id].remove(ws)
+
+
+@router.get("/stems/{job_id}")
+def list_stems(job_id: str):
+    """List generated audio stems available for individual download."""
+    job = jobs.get(job_id)
+    if not job or not job.get("result"):
+        raise HTTPException(status_code=404, detail="Stems not found")
+    stems_folder = job["result"].get("stems_folder")
+    if not stems_folder or not os.path.isdir(stems_folder):
+        raise HTTPException(status_code=404, detail="Stem files not found")
+    files = sorted(
+        name for name in os.listdir(stems_folder)
+        if name.lower().endswith(".wav")
+        and os.path.isfile(os.path.join(stems_folder, name))
+        and name != "instrumental.wav"
+    )
+    return {"stems": [{"name": name, "url": f"/download/stems/{job_id}/{name}"} for name in files]}
+
+
+@router.get("/download/stems/{job_id}/{stem_name}")
+def download_single_stem(job_id: str, stem_name: str):
+    """Serve only WAV files located in this job's output folder."""
+    job = jobs.get(job_id)
+    if not job or not job.get("result"):
+        raise HTTPException(status_code=404, detail="Stems not found")
+    if os.path.basename(stem_name) != stem_name or not stem_name.lower().endswith(".wav"):
+        raise HTTPException(status_code=400, detail="Invalid stem filename")
+    stems_folder = job["result"].get("stems_folder")
+    stem_path = os.path.join(stems_folder or "", stem_name)
+    if not stems_folder or not os.path.isdir(stems_folder) or not os.path.isfile(stem_path):
+        raise HTTPException(status_code=404, detail="Stem file not found")
+    return FileResponse(stem_path, media_type="audio/wav", filename=stem_name)
 
 
 @router.get("/download/stems/{job_id}")

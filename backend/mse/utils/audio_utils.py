@@ -93,8 +93,8 @@ def build_instrumental(stems_folder: str, stems: int) -> str:
     """
     stems_map = {
         2: ["accompaniment.wav"],
-        3: ["drums.wav", "other.wav"],
         4: ["bass.wav", "drums.wav", "other.wav"],
+        5: ["bass.wav", "drums.wav", "piano.wav", "other.wav"],
     }
 
     if stems not in stems_map:

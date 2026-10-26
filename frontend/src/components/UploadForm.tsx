@@ -127,9 +127,9 @@ export default function UploadForm({onError}: UploadFormProps) {
                             onChange={(e) => setStems(parseInt(e.target.value))}
                             style={{padding: 6}}
                         >
-                            <option value={2}>2 (Vocals + Accompaniment)</option>
-                            <option value={3}>3 (Vocals + Drums + Other)</option>
-                            <option value={4}>4 (Vocals + Bass + Drums + Other)</option>
+                            <option value={2}>2 stems — Vocals + Instrumental</option>
+                            <option value={4}>4 stems — Vocals, Bass, Drums + Other</option>
+                            <option value={5}>5 stems — Vocals, Bass, Drums, Piano + Other</option>
                         </select>
                     </div>
                 </fieldset>

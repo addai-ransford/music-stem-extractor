@@ -7,7 +7,7 @@ class SpleeterStemExtractor(IStemExtractor):
     """
     Implementation of IStemExtractor using Spleeter for audio stem separation.
     This class allows splitting an audio file into multiple stems (vocals, accompaniment, etc.)
-    using Spleeter.It supports 2, 3, or 4 stems based on user selection and saves the stems
+    using Spleeter.It supports Spleeter's 2-, 4-, and 5-stem models and saves the stems
     in a structured output directory.
     Attributes:
         base_output (str): Base folder where stems are saved.Defaults to './data/stems'.
@@ -27,7 +27,7 @@ class SpleeterStemExtractor(IStemExtractor):
         Extracts stems from the given audio file.
         Args:
             audio_path (str): Path to the input audio file.
-            stems (int): Number of stems to extract (2, 3, or 4).
+            stems (int): Number of stems to extract (2, 4, or 5).
         Returns:
             str: Path to the folder containing extracted stems.
         Raises:
