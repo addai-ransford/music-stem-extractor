@@ -91,9 +91,9 @@ export default function KeyboardStudio({ currentTime }: KeyboardStudioProps) {
       voicesRef.current.set(note, { oscillator, gain });
     }
     setPressedNotes(previous => previous.includes(note) ? previous : [...previous, note]);
-    if (recording) {
-      const time = Math.max(0, currentTime + (performance.now() - startedAtRef.current) / 1000);
-      const event = { time: recording ? time : currentTime, note, velocity, on: true };
+    if (recordingRef.current) {
+      const time = Math.max(0, currentTimeRef.current + (performance.now() - startedAtRef.current) / 1000);
+      const event = { time, note, velocity, on: true };
       eventsRef.current = [...eventsRef.current, event]; setEvents(eventsRef.current);
       activeNotesRef.current.set(note, event.time);
     }
@@ -109,8 +109,8 @@ export default function KeyboardStudio({ currentTime }: KeyboardStudioProps) {
       voicesRef.current.delete(note);
     }
     setPressedNotes(previous => previous.filter(item => item !== note));
-    if (recording) {
-      const time = Math.max(0, currentTime + (performance.now() - startedAtRef.current) / 1000);
+    if (recordingRef.current) {
+      const time = Math.max(0, currentTimeRef.current + (performance.now() - startedAtRef.current) / 1000);
       eventsRef.current = [...eventsRef.current, { time, note, velocity: 0, on: false }];
       setEvents(eventsRef.current);
     }
@@ -198,10 +198,12 @@ export default function KeyboardStudio({ currentTime }: KeyboardStudioProps) {
   const startRecording = () => {
     eventsRef.current = []; setEvents([]);
     startedAtRef.current = performance.now();
+    recordingRef.current = true;
     setRecording(true);
     setMidiStatus("Recording keyboard notes. Stop to export a standard MIDI file.");
   };
   const stopRecording = () => {
+    recordingRef.current = false;
     setRecording(false);
     setMidiStatus("Take captured. Export the MIDI file to use your performance in a DAW.");
   };
