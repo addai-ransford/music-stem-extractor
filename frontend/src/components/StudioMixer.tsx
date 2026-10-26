@@ -32,6 +32,7 @@ export default function StudioMixer({ stems }: StudioMixerProps) {
   const [loop, setLoop] = useState(false);
   const [speed, setSpeed] = useState(1);
   const [loadError, setLoadError] = useState("");
+  const stemsKey = stems.map((stem) => `${stem.name}:${stem.url}`).join("|");
 
   useEffect(() => {
     setTracks((previous) => {
@@ -41,9 +42,8 @@ export default function StudioMixer({ stems }: StudioMixerProps) {
       });
       return next;
     });
-  }, [stems]);
-
-  const updateTrack = (name: string, patch: Partial<TrackState>) => {
+  // Depend on the actual stem identities rather than the array instance passed by the parent.\n  }, [stemsKey]);
+\n  const updateTrack = (name: string, patch: Partial<TrackState>) => {
     setTracks((previous) => ({
       ...previous,
       [name]: { muted: false, solo: false, volume: 1, ...previous[name], ...patch },
@@ -59,7 +59,7 @@ export default function StudioMixer({ stems }: StudioMixerProps) {
       audio.volume = track.muted || (hasSolo && !track.solo) ? 0 : track.volume;
       audio.playbackRate = speed;
     });
-  }, [stems, tracks, speed]);
+  }, [stemsKey, tracks, speed]);
 
   const seekAll = useCallback((time: number) => {
     audioRefs.current.forEach((audio) => {
