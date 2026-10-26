@@ -30,7 +30,7 @@ function encodeVariableLength(value: number): number[] {
 }
 function makeMidiFile(events: RecordedEvent[]): Blob {
   const sorted = [...events].sort((a, b) => a.time - b.time || Number(a.on) - Number(b.on));
-  const ticksPerSecond = 960;
+  const ticksPerSecond = 1920;
   let previousTick = 0;
   const track: number[] = [];
   for (const event of sorted) {
@@ -61,6 +61,10 @@ export default function KeyboardStudio({ currentTime }: KeyboardStudioProps) {
   const startedAtRef = useRef(0);
   const eventsRef = useRef<RecordedEvent[]>([]);
   const activeNotesRef = useRef<Map<number, number>>(new Map());
+  const currentTimeRef = useRef(currentTime);
+  const recordingRef = useRef(recording);
+  useEffect(() => { currentTimeRef.current = currentTime; }, [currentTime]);
+  useEffect(() => { recordingRef.current = recording; }, [recording]);
   const selectedInputRef = useRef<MIDIInput | null>(null);
 
   const getContext = useCallback(() => {
@@ -93,7 +97,7 @@ export default function KeyboardStudio({ currentTime }: KeyboardStudioProps) {
       eventsRef.current = [...eventsRef.current, event]; setEvents(eventsRef.current);
       activeNotesRef.current.set(note, event.time);
     }
-  }, [currentTime, getContext, recording]);
+  }, [getContext]);
 
   const noteOff = useCallback((note: number) => {
     const voice = voicesRef.current.get(note);
@@ -110,7 +114,7 @@ export default function KeyboardStudio({ currentTime }: KeyboardStudioProps) {
       eventsRef.current = [...eventsRef.current, { time, note, velocity: 0, on: false }];
       setEvents(eventsRef.current);
     }
-  }, [currentTime, recording]);
+  }, []);
 
   const connectMidi = async () => {
     const nav = navigator as Navigator & { requestMIDIAccess?: (options?: { sysex?: boolean }) => Promise<MIDIAccess> };
