@@ -266,6 +266,8 @@ export default function ResultDisplay({ jobId, onStatusChange }: ResultDisplayPr
   };
 
   const activeStepIndex = STEPS.findIndex((step) => step.id === status);
+  const progressPercent = status === "queued" ? 0 : status === "downloading" ? 12 : status === "extracting" ? 45 : status === "key" ? 72 : status === "zipping" ? 90 : 0;
+  const activeStepNumber = activeStepIndex >= 0 ? activeStepIndex + 1 : 1;
   const finished = status === "done";
   const failed = status === "error";
 
@@ -333,30 +335,17 @@ export default function ResultDisplay({ jobId, onStatusChange }: ResultDisplayPr
           <div className="progress-heading">
             <div>
               <p className="eyebrow">IN PROGRESS</p>
-              <h3 id="job-panel-title">{status === "queued" ? "Your track is in the queue" : STEPS.find((step) => step.id === status)?.title || "Working on your track"}</h3>
+              <h3 id="job-panel-title">{status === "queued" ? "Preparing your track" : STEPS.find((step) => step.id === status)?.title || "Working on your track"}</h3>
+              <p className="progress-description">{status === "queued" ? "Waiting to begin processing…" : `Step ${activeStepNumber} of ${STEPS.length} · ${STEPS.find((step) => step.id === status)?.description || "Processing your audio"}`}</p>
             </div>
-            <span className="progress-pulse" aria-hidden="true"><span /></span>
+            <strong className="progress-percentage">{progressPercent}%</strong>
           </div>
-          <p className="progress-description">{socketState === "reconnecting" ? "Reconnecting to live updates. Processing may continue in the background." : statusMessage(status)}</p>
-          <ol className="progress-steps">
-            {STEPS.map((step, index) => {
-              const complete = activeStepIndex >= 0 && index < activeStepIndex;
-              const active = step.id === status;
-              return (
-                <li className={complete ? "progress-step is-complete" : active ? "progress-step is-active" : "progress-step"} key={step.id}>
-                  <span className="step-marker" aria-hidden="true">{complete ? "✓" : index + 1}</span>
-                  <span className="step-content">
-                    <strong>{step.title}</strong>
-                    <small>{step.description}</small>
-                  </span>
-                  {active && <span className="step-state">Current</span>}
-                </li>
-              );
-            })}
-          </ol>
-          <p className="connection-note" role="status">
-            <span className={socketState === "connected" ? "connection-dot is-connected" : "connection-dot"} aria-hidden="true" />
-            {socketState === "connected" ? "Live status connected" : socketState === "reconnecting" ? "Restoring live updates…" : "Connecting to live updates…"}
+          <div className="progress-track" role="progressbar" aria-label="Audio processing progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progressPercent}>
+            <div className="progress-track-fill" style={{ width: `${progressPercent}%` }} />
+          </div>
+          <p className="progress-live-note" role="status">
+            <span className="progress-pulse" aria-hidden="true"><span /></span>
+            {socketState === "reconnecting" ? "Reconnecting to live updates…" : status === "extracting" ? "Separating your audio layers…" : "Working on your track…"}
           </p>
         </div>
       )}
