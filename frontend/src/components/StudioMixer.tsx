@@ -7,6 +7,8 @@ export interface StudioStem {
 
 interface StudioMixerProps {
   stems: StudioStem[];
+  seekRequest?: { time: number; token: number } | null;
+  onTimeChange?: (seconds: number) => void;
 }
 
 interface TrackState {
@@ -23,7 +25,7 @@ const formatTime = (value: number) => {
 
 const labelFor = (name: string) => name.replace(/\.wav$/i, "").replace(/[_-]/g, " ");
 
-export default function StudioMixer({ stems }: StudioMixerProps) {
+export default function StudioMixer({ stems, seekRequest, onTimeChange }: StudioMixerProps) {
   const audioRefs = useRef<Array<HTMLAudioElement | null>>([]);
   const [tracks, setTracks] = useState<Record<string, TrackState>>({});
   const [playing, setPlaying] = useState(false);
@@ -70,7 +72,13 @@ export default function StudioMixer({ stems }: StudioMixerProps) {
       }
     });
     setCurrentTime(time);
-  }, []);
+    onTimeChange?.(time);
+  }, [onTimeChange]);
+
+  useEffect(() => {
+    if (!seekRequest) return;
+    seekAll(seekRequest.time);
+  }, [seekRequest?.token, seekRequest?.time, seekAll]);
 
   const togglePlayback = async () => {
     const audioTracks = audioRefs.current.filter((audio): audio is HTMLAudioElement => Boolean(audio));
@@ -102,6 +110,7 @@ export default function StudioMixer({ stems }: StudioMixerProps) {
 
   const syncTime = (source: HTMLAudioElement) => {
     setCurrentTime(source.currentTime);
+    onTimeChange?.(source.currentTime);
     audioRefs.current.forEach((audio) => {
       if (!audio || audio === source || audio.paused || !Number.isFinite(audio.duration)) return;
       if (Math.abs(audio.currentTime - source.currentTime) > 0.22) {
@@ -179,6 +188,7 @@ export default function StudioMixer({ stems }: StudioMixerProps) {
                       if (playing) void item.play().catch(() => undefined);
                     });
                     setCurrentTime(0);
+                    onTimeChange?.(0);
                   }
                 }}
                 onEnded={() => {
