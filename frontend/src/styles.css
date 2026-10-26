@@ -697,3 +697,33 @@ input:disabled {
   .studio-transport { gap: 9px; }
   .studio-speed { margin-left: auto; }
 }
+
+
+/* Keyboard and MIDI performance recorder */
+.keyboard-studio { margin: 22px 0; padding: clamp(16px, 3vw, 24px); border: 1px solid rgba(110,231,183,.23); border-radius: 18px; background: linear-gradient(145deg, rgba(20,38,37,.42), rgba(19,19,31,.94)); min-width: 0; }
+.keyboard-studio-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; margin-bottom:18px; }
+.keyboard-studio-heading h4 { margin:4px 0 7px; font:600 1.25rem "Space Grotesk",sans-serif; }
+.keyboard-recording-badge { flex-shrink:0; padding:7px 10px; border:1px solid var(--border); border-radius:999px; color:#c7c3d9; font-size:.75rem; white-space:nowrap; }
+.keyboard-recording-badge.is-recording { color:#fecaca; border-color:rgba(248,113,113,.45); background:rgba(220,38,38,.12); animation: keyboard-record-pulse 1.2s ease-in-out infinite; }
+@keyframes keyboard-record-pulse { 50% { opacity:.65; } }
+.keyboard-tools, .keyboard-record-controls { display:flex; align-items:center; flex-wrap:wrap; gap:10px; }
+.keyboard-note-count { color:var(--muted); font-size:.76rem; margin-left:auto; }
+.keyboard-midi-status { margin:10px 0; color:#a8d9c7; font-size:.78rem; line-height:1.5; }
+.keyboard-computer-hint { margin:12px 0; color:var(--muted); font-size:.76rem; }
+.keyboard-computer-hint strong { color:#ded5ff; font-weight:600; word-spacing:3px; }
+.keyboard-piano { position:relative; display:flex; height:145px; width:100%; overflow:hidden; padding:0; border:1px solid rgba(0,0,0,.55); border-radius:8px; background:#f6f4fb; touch-action:pan-y; user-select:none; }
+.keyboard-piano-key { position:relative; touch-action:none; cursor:pointer; }
+.white-piano-key { display:flex; align-items:flex-end; justify-content:center; flex:1 1 0; min-width:0; padding:0 0 9px; border:0; border-right:1px solid #c9c5d4; border-radius:0; color:#575166; background:linear-gradient(#fff,#e9e6f0); font-size:clamp(8px,1.5vw,11px); }
+.white-piano-key:last-of-type { border-right:0; }
+.black-piano-key { position:absolute; z-index:2; top:0; width:4.4%; height:61%; display:flex; align-items:flex-end; justify-content:center; padding:0 0 6px; border:1px solid #08070d; border-top:0; border-radius:0 0 4px 4px; color:#ddd5f1; background:linear-gradient(90deg,#292536,#08070d 48%,#302b3e); box-shadow:0 3px 4px rgba(0,0,0,.28); transform:translateX(-50%); font-size:8px; }
+.keyboard-piano-key.is-pressed, .white-piano-key:active { color:#211638; background:linear-gradient(#e2d6ff,#b69cff); box-shadow:inset 0 -4px 0 rgba(112,76,180,.25); }
+.black-piano-key.is-pressed, .black-piano-key:active { color:#fff; background:linear-gradient(90deg,#9a7be8,#6e4dc1 50%,#a78bfa); }
+.keyboard-record-controls { margin-top:14px; }
+.keyboard-stop-button { color:#fff; background:#be454f; }
+.keyboard-record-controls button:disabled { opacity:.38; cursor:not-allowed; }
+@media (max-width:600px) {
+ .keyboard-studio-heading { flex-direction:column; }
+ .keyboard-piano { height:115px; }
+ .keyboard-note-count { flex-basis:100%; margin-left:0; }
+ .keyboard-piano-key { font-size:8px; }
+}
