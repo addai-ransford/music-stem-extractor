@@ -3,6 +3,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 export interface StudioStem {
   name: string;
   url: string;
+  downloadUrl?: string;
 }
 
 interface StudioMixerProps {
@@ -216,6 +217,11 @@ export default function StudioMixer({ stems, seekRequest, onTimeChange }: Studio
                   <input type="range" min={0} max={1} step={0.01} value={track.volume} aria-label={`${labelFor(stem.name)} volume`} onChange={(event) => updateTrack(stem.name, { volume: Number(event.target.value) })} />
                 </label>
                 <span className="studio-volume-value">{Math.round(track.volume * 100)}%</span>
+                {stem.downloadUrl && (
+                  <a className="studio-track-download" href={stem.downloadUrl} download aria-label={`Download ${labelFor(stem.name)} stem`}>
+                    ↓ Download
+                  </a>
+                )}
               </div>
             </article>
           );
