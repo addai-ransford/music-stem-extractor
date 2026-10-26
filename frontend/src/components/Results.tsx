@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import ChordTimeline, { type ChordSegment } from "./ChordTimeline";
+import StudioMixer from "./StudioMixer";
 
 interface ResultDisplayProps {
   jobId: string;
@@ -308,6 +309,12 @@ export default function ResultDisplay({ jobId, onStatusChange }: ResultDisplayPr
             {chordWarning && <p className="chord-disclaimer" role="status">{chordWarning}</p>}
             <ChordTimeline chords={chords} currentTime={currentTime} onSeek={seekToChord} originalKey={detectedKey} />
           </section>
+          {!filesLoading && stemFiles.some((stem) => getStemDownloadUrl(stem.url)) && (
+            <StudioMixer stems={stemFiles.flatMap((stem) => {
+              const url = getStemDownloadUrl(stem.url);
+              return url ? [{ name: stem.name, url }] : [];
+            })} />
+          )}
           <div className="stem-mixer" aria-busy={filesLoading}>
             <div className="mixer-header"><span>TRACK</span><span>PREVIEW & EXPORT</span></div>
             {filesLoading && <p className="muted-message" role="status">Loading your WAV files…</p>}
