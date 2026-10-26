@@ -313,7 +313,9 @@ export default function ResultDisplay({ jobId, onStatusChange }: ResultDisplayPr
             {chordWarning && <p className="chord-disclaimer" role="status">{chordWarning}</p>}
             <ChordTimeline chords={chords} currentTime={currentTime} onSeek={seekToChord} originalKey={detectedKey} />
           </section>
-          {filesLoading && <p className="muted-message" role="status">Loading your WAV stems…</p>}\n          {!filesLoading && !stemFiles.some((stem) => getStemDownloadUrl(stem.url)) && <p className="muted-message" role="status">{error || "No individual stem files were returned. You can still try the full ZIP archive."}</p>}\n          {!filesLoading && stemFiles.some((stem) => getStemDownloadUrl(stem.url)) && (
+          {filesLoading && <p className="muted-message" role="status">Loading your WAV stems…</p>}
+          {!filesLoading && !stemFiles.some((stem) => getStemDownloadUrl(stem.url)) && <p className="muted-message" role="status">{error || "No individual stem files were returned. You can still try the full ZIP archive."}</p>}
+          {!filesLoading && stemFiles.some((stem) => getStemDownloadUrl(stem.url)) && (
             <>
               <StudioMixer stems={stemFiles.flatMap((stem) => {
                 const url = getStemDownloadUrl(stem.url);
