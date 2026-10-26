@@ -42,8 +42,10 @@ export default function StudioMixer({ stems }: StudioMixerProps) {
       });
       return next;
     });
-  // Depend on the actual stem identities rather than the array instance passed by the parent.\n  }, [stemsKey]);
-\n  const updateTrack = (name: string, patch: Partial<TrackState>) => {
+  // Depend on the actual stem identities rather than the array instance passed by the parent.
+  }, [stemsKey]);
+
+  const updateTrack = (name: string, patch: Partial<TrackState>) => {
     setTracks((previous) => ({
       ...previous,
       [name]: { muted: false, solo: false, volume: 1, ...previous[name], ...patch },
