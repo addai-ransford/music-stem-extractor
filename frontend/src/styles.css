@@ -727,4 +727,6 @@ input:disabled {
  .keyboard-note-count { flex-basis:100%; margin-left:0; }
  .keyboard-piano-key { font-size:8px; }
 }
-\n.studio-track-download { display:inline-flex; align-items:center; justify-content:center; min-height:32px; padding:6px 10px; border:1px solid var(--border); border-radius:8px; color:#ded5ff; text-decoration:none; font-size:.75rem; white-space:nowrap; }\n.studio-track-download:hover { border-color:var(--accent); background:rgba(182,156,255,.1); }\n
+
+.studio-track-download { display:inline-flex; align-items:center; justify-content:center; min-height:32px; padding:6px 10px; border:1px solid var(--border); border-radius:8px; color:#ded5ff; text-decoration:none; font-size:.75rem; white-space:nowrap; }
+.studio-track-download:hover { border-color:var(--accent); background:rgba(182,156,255,.1); }\n
