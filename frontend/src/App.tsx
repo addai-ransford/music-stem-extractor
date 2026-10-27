@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import UploadForm from "./components/UploadForm";
 import "./workstation.css";
+import "./import-studio.css";
 
 type View = "Arrange" | "Session" | "Chords" | "Mix" | "Practice";
 const VIEWS: View[] = ["Arrange", "Session", "Chords", "Mix", "Practice"];
