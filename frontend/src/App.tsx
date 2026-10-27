@@ -15,6 +15,8 @@ const LANES = [
 const CHORDS = ["C", "G", "Am", "F", "C", "G", "F", "G"];
 export default function App() {
   const [view, setView] = useState<View>("Arrange");
+  const [importOpen, setImportOpen] = useState(false);
+  const [songUrl, setSongUrl] = useState("");
   const [error, setError] = useState("");
   const [browserOpen, setBrowserOpen] = useState(true);
   const [inspectorOpen, setInspectorOpen] = useState(true);
@@ -24,8 +26,9 @@ export default function App() {
   return <div className="workstation">
     <header className="ws-header">
       <a className="ws-logo" href="#workstation"><span>♫</span><strong>STEM LAB</strong><small>WORKSTATION</small></a>
+      <form className="ws-song-search" onSubmit={(event) => { event.preventDefault(); setImportOpen(true); }}><label htmlFor="ws-song-url" className="ws-sr-only">YouTube song URL</label><input id="ws-song-url" type="url" value={songUrl} onChange={event => setSongUrl(event.target.value)} placeholder="Paste a YouTube song link…" /><button type="submit" aria-label="Import YouTube song">⌕</button></form>
       <nav className="ws-tabs" aria-label="Workstation views">{VIEWS.map(item => <button type="button" key={item} className={view === item ? "selected" : ""} onClick={() => setView(item)}>{item}</button>)}</nav>
-      <div className="ws-header-actions"><span className="ws-chip">STUDIO / LOCAL SESSION</span><a href="#import" className="ws-import">+ Import song</a></div>
+      <div className="ws-header-actions"><button type="button" onClick={() => setImportOpen(true)} className="ws-import">↑ Upload song</button></div>
     </header>
     <div className="ws-transport">
       <div className="ws-toolbar-group"><button onClick={() => setBrowserOpen(!browserOpen)} aria-label="Toggle browser" aria-pressed={browserOpen}>☷</button><span className="ws-muted">Untitled session</span></div>
@@ -35,14 +38,14 @@ export default function App() {
     <div className="ws-main" id="workstation">
       {browserOpen && <aside className="ws-browser">
         <div className="ws-pane-title">LIBRARY <span>⌕</span></div>
-        <a href="#import" className="ws-library-active">♫ &nbsp; My audio</a>
-        <a href="#import">▦ &nbsp; Stem separation</a>
+        <button onClick={() => setImportOpen(true)} className="ws-library-active">♫ &nbsp; My audio</button>
+        <button onClick={() => setImportOpen(true)}>▦ &nbsp; Stem separation</button>
         <button onClick={() => setView("Chords")}>♬ &nbsp; Chord intelligence</button>
         <button onClick={() => setView("Practice")}>◎ &nbsp; Practice tools</button>
         <div className="ws-divider"/>
         <p className="ws-overline">SESSION CONTENT</p>
         <p className="ws-help">Import a song to create real stem tracks, analyze its key, and explore detected chords.</p>
-        <a href="#import" className="ws-browser-cta">+ New analysis</a>
+        <button onClick={() => setImportOpen(true)} className="ws-browser-cta">+ New analysis</button>
       </aside>}
       <main className="ws-center">
         <div className="ws-section-header"><div><span className="ws-overline">MUSIC PRODUCTION / {view.toUpperCase()}</span><h1>{view === "Arrange" ? "Arrangement" : view === "Session" ? "Session workspace" : view === "Chords" ? "Chord intelligence" : view === "Mix" ? "Mixing console" : "Practice studio"}</h1></div><span className="ws-demo-label">SESSION PREVIEW · NO AUDIO LOADED</span></div>
@@ -54,13 +57,14 @@ export default function App() {
           </div>)}
           <div className="ws-arrangement-foot">Visual layout preview only — audio, seeking and synchronized stem mixing are available after processing a song.</div>
         </div>}
-        {(view === "Chords" || view === "Practice") && <div className="ws-feature-view"><div className="ws-overline">HARMONY / PRACTICE</div><h2>Follow the music, not just the waveform.</h2><p>Process a track below to load real timestamped chord analysis, key detection, keyboard visualization and synchronized practice controls. The chord sequence shown here is only a layout example.</p><div className="ws-chord-row">{CHORDS.map((chord,i)=><button key={i} className={activeChord===i?"active":""} onClick={()=>setActiveChord(i)}>{chord}</button>)}</div><a className="ws-import" href="#import">Analyze a song ↗</a></div>}
+        {(view === "Chords" || view === "Practice") && <div className="ws-feature-view"><div className="ws-overline">HARMONY / PRACTICE</div><h2>Follow the music, not just the waveform.</h2><p>Process a track below to load real timestamped chord analysis, key detection, keyboard visualization and synchronized practice controls. The chord sequence shown here is only a layout example.</p><div className="ws-chord-row">{CHORDS.map((chord,i)=><button key={i} className={activeChord===i?"active":""} onClick={()=>setActiveChord(i)}>{chord}</button>)}</div><button className="ws-import" onClick={() => setImportOpen(true)}>Analyze a song ↗</button></div>}
         {lowerOpen && <section className="ws-lower"><div className="ws-lower-head"><span>◫ &nbsp; DETAIL EDITOR</span><button onClick={()=>setLowerOpen(false)}>Hide panel −</button></div><div className="ws-keyboard"><div className="ws-keys">{Array.from({length:15},(_,i)=><div key={i} className={([1,3,6,8,10,13].includes(i))?"black-key":"white-key"} />)}</div><div className="ws-piano-grid">{Array.from({length:12},(_,i)=><div key={i} className="ws-note-row"><span style={{left:(i*13)%80+"%",width:12+(i%3)*8+"%"}} /></div>)}</div></div><p className="ws-help">Piano-roll layout preview. MIDI note editing is planned; this panel does not generate or save MIDI yet.</p></section>}
         {!lowerOpen && <button className="ws-restore" onClick={()=>setLowerOpen(true)}>Show detail editor +</button>}
       </main>
       {inspectorOpen && <aside className="ws-inspector"><div className="ws-pane-title">CHORD INTELLIGENCE <span>✦</span></div><p className="ws-overline">ANALYSIS STATUS</p><div className="ws-empty-state">♫<strong>Awaiting your song</strong><p>Detected chords, key, and musical structure will appear with processed results.</p></div><div className="ws-divider"/><p className="ws-overline">CHORD PROGRESSION · EXAMPLE</p><div className="ws-chord-grid">{CHORDS.map((chord,i)=><button key={i} className={activeChord===i?"active":""} onClick={()=>setActiveChord(i)}>{chord}</button>)}</div><p className="ws-help">These sample chords are not an analysis of your audio.</p><div className="ws-divider"/><p className="ws-overline">LYRICS</p><p className="ws-help">Synchronized lyrics require a transcription source; the current backend does not provide lyrics.</p></aside>}
     </div>
-    <section className="ws-import-section" id="import"><div className="ws-import-heading"><div><span className="ws-overline">NEW SESSION / AUDIO IMPORT</span><h2>Bring your music into the studio</h2><p>Import a recording, isolate its instruments, and explore the harmony in your workspace.</p></div><span className="ws-chip">STEM SEPARATION + CHORD ANALYSIS</span></div><UploadForm onError={setError}/>{error && <div role="alert" className="ws-error">{error}<button onClick={()=>setError("")} aria-label="Dismiss error">×</button></div>}</section>
+    {importOpen && <div className="ws-import-overlay" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setImportOpen(false); }}><section className="ws-import-dialog" role="dialog" aria-modal="true" aria-label="Import a song"><div className="ws-dialog-header"><div><span className="ws-overline">NEW STUDIO SESSION</span><h2>Import your song</h2></div><button type="button" onClick={() => setImportOpen(false)} aria-label="Close import dialog">×</button></div><div className="ws-import-section" id="import"><UploadForm onError={setError} initialUrl={songUrl} onJobStarted={() => setImportOpen(false)} />{error && <div role="alert" className="ws-error">{error}<button onClick={() => setError("")} aria-label="Dismiss error">×</button></div>}</div></section></div>}
+    <section className="ws-session-output" aria-label="Processed song session"><div className="ws-output-header"><span className="ws-overline">SESSION AUDIO & ANALYSIS</span><p>Processing and playback results appear here after importing a song.</p></div><div id="ws-session-results" /></section>
     <footer className="ws-footer">STEM LAB · MUSIC INTELLIGENCE WORKSTATION <span>Arrangement and piano-roll panels are previews; processing results use live backend data.</span></footer>
   </div>;
 }
