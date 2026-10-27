@@ -1,143 +1,65 @@
 import React, { useState } from "react";
-import Footer from "./components/Footer";
 import UploadForm from "./components/UploadForm";
+import "./workstation.css";
 
-const WORKSPACES = [
-  {
-    number: "01",
-    symbol: "◉",
-    title: "Stem Studio",
-    description: "Separate vocals, drums, bass, and instruments. Solo a layer, shape the balance, and listen inside the mix.",
-    tag: "ISOLATE & MIX",
-  },
-  {
-    number: "02",
-    symbol: "♫",
-    title: "Chord Explorer",
-    description: "Follow the chord timeline with the song, explore its harmony, and use the detected key as a starting point.",
-    tag: "FOLLOW THE HARMONY",
-  },
-  {
-    number: "03",
-    symbol: "⌁",
-    title: "Practice Lab",
-    description: "Slow down difficult passages, loop a section, and focus on the part you want to learn.",
-    tag: "LEARN BY DOING",
-  },
-  {
-    number: "04",
-    symbol: "⌘",
-    title: "Keyboard & MIDI",
-    description: "Explore notes on a playable keyboard and take musical ideas into your own workflow with MIDI export.",
-    tag: "EXPLORE & CREATE",
-  },
+type View = "Arrange" | "Session" | "Chords" | "Mix" | "Practice";
+const VIEWS: View[] = ["Arrange", "Session", "Chords", "Mix", "Practice"];
+const LANES = [
+  { name: "Vocals", icon: "◉", color: "#a86bff", pattern: [16,30,23,40,34,20,36,45,30,22,40,25] },
+  { name: "Drums", icon: "▦", color: "#f28c9c", pattern: [30,20,42,28,46,24,36,18,44,28,38,20] },
+  { name: "Bass", icon: "♩", color: "#65a8ff", pattern: [25,36,18,40,27,38,20,35,24,40,28,36] },
+  { name: "Piano", icon: "▤", color: "#63dca7", pattern: [38,20,32,45,26,36,44,20,35,24,42,30] },
+  { name: "Other", icon: "✦", color: "#f5c76b", pattern: [18,32,40,20,34,44,26,39,22,38,28,45] },
 ];
-
+const CHORDS = ["C", "G", "Am", "F", "C", "G", "F", "G"];
 export default function App() {
+  const [view, setView] = useState<View>("Arrange");
   const [error, setError] = useState("");
-
-  return (
-    <div className="app-shell studio-shell">
-      <header className="studio-topbar">
-        <a className="app-brand" href="#top" aria-label="Stem Lab home">
-          <span className="app-brand-mark" aria-hidden="true">♫</span>
-          <span className="app-brand-copy"><strong>STEM LAB</strong><small>Music intelligence studio</small></span>
-        </a>
-        <nav className="studio-nav" aria-label="Main navigation">
-          <a className="studio-nav-link is-current" href="#workspace" aria-current="page">Studio</a>
-          <a className="studio-nav-link" href="#workspaces">Explore tools</a>
-          <a className="studio-nav-link" href="#workflow">How it works</a>
-        </nav>
-        <a className="appbar-status" href="#workspace"><span aria-hidden="true" /> New session</a>
-      </header>
-
-      <main className="page-main studio-main" id="top">
-        <div className="app-container studio-container">
-          <section className="studio-intro">
-            <div>
-              <p className="eyebrow"><span className="intro-spark" aria-hidden="true">✳</span> ONE SONG. EVERY LAYER.</p>
-              <h1>Get inside<br className="mobile-title-break" /> <span>the music.</span></h1>
-              <p className="hero-copy">Stem Lab is your music intelligence workspace. Pull a song apart, follow its harmony, practise the tricky bits, and discover what makes it work.</p>
-              <div className="hero-actions">
-                <a className="primary-action" href="#workspace">Open a song <span aria-hidden="true">↗</span></a>
-                <a className="secondary-action" href="#workspaces">Explore the studio</a>
-              </div>
-              <div className="hero-proof" aria-label="Studio capabilities">
-                <span><i aria-hidden="true">✓</i> Stem separation</span>
-                <span><i aria-hidden="true">✓</i> Chord & key tools</span>
-                <span><i aria-hidden="true">✓</i> Practice workspace</span>
-              </div>
-            </div>
-            <div className="intro-orbit" aria-hidden="true">
-              <span className="orbit-ring ring-one" /><span className="orbit-ring ring-two" />
-              <span className="orbit-note">♫</span><span className="orbit-dot dot-one" /><span className="orbit-dot dot-two" /><span className="orbit-dot dot-three" />
-              <span className="orbit-label orbit-label-top">ANALYSE</span>
-              <span className="orbit-label orbit-label-right">ISOLATE</span>
-              <span className="orbit-label orbit-label-bottom">PRACTISE</span>
-            </div>
-          </section>
-
-          <section className="workspace studio-workspace" id="workspace" aria-labelledby="workspace-title">
-            <div className="section-heading">
-              <div>
-                <p className="eyebrow">START A SESSION</p>
-                <h2 id="workspace-title">Bring a song into the lab</h2>
-                <p className="section-subtitle">Import an audio file or paste a YouTube link to start analysing your track.</p>
-              </div>
-              <span className="privacy-note"><span aria-hidden="true">●</span> Your session</span>
-            </div>
-            <UploadForm onError={setError} />
-            {error && (
-              <div className="app-alert" role="alert">
-                <span aria-hidden="true">!</span><p>{error}</p>
-                <button className="alert-dismiss" type="button" onClick={() => setError("")} aria-label="Dismiss error">×</button>
-              </div>
-            )}
-          </section>
-
-          <section className="features studio-features" id="workspaces" aria-labelledby="features-title">
-            <div className="features-heading">
-              <p className="eyebrow">MORE THAN STEMS</p>
-              <h2 id="features-title">One workspace. More ways to hear.</h2>
-              <p className="section-subtitle">Move from listening to understanding, then from understanding to playing.</p>
-            </div>
-            <div className="feature-grid workspace-tool-grid">
-              {WORKSPACES.map((workspace) => (
-                <article className="feature-card workspace-tool-card" key={workspace.number}>
-                  <div className="tool-card-topline">
-                    <span className="feature-icon" aria-hidden="true">{workspace.symbol}</span>
-                    <span className="tool-card-number">{workspace.number}</span>
-                  </div>
-                  <p className="tool-card-tag">{workspace.tag}</p>
-                  <h3>{workspace.title}</h3>
-                  <p>{workspace.description}</p>
-                  <a href="#workspace" className="tool-card-link">Start with a song <span aria-hidden="true">↗</span></a>
-                </article>
-              ))}
-            </div>
-            <p className="format-note">Analysis quality depends on the source recording. Detected musical information is a starting point, and should be checked by ear.</p>
-          </section>
-
-          <section className="workflow-section" id="workflow" aria-labelledby="workflow-title">
-            <div className="features-heading">
-              <p className="eyebrow">FROM SONG TO INSIGHT</p>
-              <h2 id="workflow-title">A better way to work with music.</h2>
-            </div>
-            <div className="workflow-steps">
-              <article className="workflow-step"><span>01</span><div><h3>Bring it in</h3><p>Start with a track you want to understand, learn, or remix.</p></div></article>
-              <article className="workflow-step"><span>02</span><div><h3>Break it down</h3><p>Separate the sound into stems and inspect the musical details available.</p></div></article>
-              <article className="workflow-step"><span>03</span><div><h3>Make it yours</h3><p>Listen closely, practise a part, and export the files you need.</p></div></article>
-            </div>
-          </section>
-        </div>
-      </main>
-
-      <nav className="mobile-bottom-nav" aria-label="Main navigation">
-        <a className="bottom-nav-item is-current" href="#top" aria-current="page"><span aria-hidden="true">⌂</span><small>Home</small></a>
-        <a className="bottom-nav-item" href="#workspace"><span aria-hidden="true">＋</span><small>New song</small></a>
-        <a className="bottom-nav-item" href="#workspaces"><span aria-hidden="true">✳</span><small>Explore</small></a>
-      </nav>
-      <Footer />
+  const [browserOpen, setBrowserOpen] = useState(true);
+  const [inspectorOpen, setInspectorOpen] = useState(true);
+  const [lowerOpen, setLowerOpen] = useState(true);
+  const [activeChord, setActiveChord] = useState(0);
+  const [selectedLane, setSelectedLane] = useState("Piano");
+  return <div className="workstation">
+    <header className="ws-header">
+      <a className="ws-logo" href="#workstation"><span>♫</span><strong>STEM LAB</strong><small>WORKSTATION</small></a>
+      <nav className="ws-tabs" aria-label="Workstation views">{VIEWS.map(item => <button type="button" key={item} className={view === item ? "selected" : ""} onClick={() => setView(item)}>{item}</button>)}</nav>
+      <div className="ws-header-actions"><span className="ws-chip">STUDIO / LOCAL SESSION</span><a href="#import" className="ws-import">+ Import song</a></div>
+    </header>
+    <div className="ws-transport">
+      <div className="ws-toolbar-group"><button onClick={() => setBrowserOpen(!browserOpen)} aria-label="Toggle browser" aria-pressed={browserOpen}>☷</button><span className="ws-muted">Untitled session</span></div>
+      <div className="ws-toolbar-group ws-transport-center"><span className="ws-time">1 . 1 . 1</span><span className="ws-transport-note">Playback controls activate with processed audio ↓</span><span className="ws-time">120 <small>BPM · reference</small></span></div>
+      <div className="ws-toolbar-group"><span className="ws-chip">4/4</span><span className="ws-chip">Key from analysis</span><button onClick={() => setInspectorOpen(!inspectorOpen)} aria-label="Toggle chord inspector" aria-pressed={inspectorOpen}>◫</button></div>
     </div>
-  );
+    <div className="ws-main" id="workstation">
+      {browserOpen && <aside className="ws-browser">
+        <div className="ws-pane-title">LIBRARY <span>⌕</span></div>
+        <a href="#import" className="ws-library-active">♫ &nbsp; My audio</a>
+        <a href="#import">▦ &nbsp; Stem separation</a>
+        <button onClick={() => setView("Chords")}>♬ &nbsp; Chord intelligence</button>
+        <button onClick={() => setView("Practice")}>◎ &nbsp; Practice tools</button>
+        <div className="ws-divider"/>
+        <p className="ws-overline">SESSION CONTENT</p>
+        <p className="ws-help">Import a song to create real stem tracks, analyze its key, and explore detected chords.</p>
+        <a href="#import" className="ws-browser-cta">+ New analysis</a>
+      </aside>}
+      <main className="ws-center">
+        <div className="ws-section-header"><div><span className="ws-overline">MUSIC PRODUCTION / {view.toUpperCase()}</span><h1>{view === "Arrange" ? "Arrangement" : view === "Session" ? "Session workspace" : view === "Chords" ? "Chord intelligence" : view === "Mix" ? "Mixing console" : "Practice studio"}</h1></div><span className="ws-demo-label">SESSION PREVIEW · NO AUDIO LOADED</span></div>
+        {(view === "Arrange" || view === "Session" || view === "Mix") && <div className="ws-arrangement" aria-label="Illustrative arrangement; load a track below for actual audio">
+          <div className="ws-ruler"><span>TRACK</span><div>{Array.from({length: 12}, (_,i) => <span key={i}>{i+1}</span>)}</div></div>
+          {LANES.map((lane, index) => <div className={"ws-track "+(selectedLane === lane.name ? "ws-track-selected" : "")} key={lane.name}>
+            <button className="ws-track-label" onClick={() => setSelectedLane(lane.name)}><span style={{color:lane.color}}>{lane.icon}</span><strong>{lane.name}</strong><small>PREVIEW</small></button>
+            <div className="ws-track-content"><div className="ws-clip" style={{background:lane.color+"28",borderColor:lane.color+"77",left:index%2===0?"1%":"12%",width:index===4?"74%":"86%"}}><span style={{color:lane.color}}>{lane.name} · illustrative clip</span><div className="ws-wave">{lane.pattern.concat(lane.pattern,lane.pattern).map((n,i)=><i key={i} style={{height:n+"%",background:lane.color}}/>)}</div></div></div>
+          </div>)}
+          <div className="ws-arrangement-foot">Visual layout preview only — audio, seeking and synchronized stem mixing are available after processing a song.</div>
+        </div>}
+        {(view === "Chords" || view === "Practice") && <div className="ws-feature-view"><div className="ws-overline">HARMONY / PRACTICE</div><h2>Follow the music, not just the waveform.</h2><p>Process a track below to load real timestamped chord analysis, key detection, keyboard visualization and synchronized practice controls. The chord sequence shown here is only a layout example.</p><div className="ws-chord-row">{CHORDS.map((chord,i)=><button key={i} className={activeChord===i?"active":""} onClick={()=>setActiveChord(i)}>{chord}</button>)}</div><a className="ws-import" href="#import">Analyze a song ↗</a></div>}
+        {lowerOpen && <section className="ws-lower"><div className="ws-lower-head"><span>◫ &nbsp; DETAIL EDITOR</span><button onClick={()=>setLowerOpen(false)}>Hide panel −</button></div><div className="ws-keyboard"><div className="ws-keys">{Array.from({length:15},(_,i)=><div key={i} className={([1,3,6,8,10,13].includes(i))?"black-key":"white-key"} />)}</div><div className="ws-piano-grid">{Array.from({length:12},(_,i)=><div key={i} className="ws-note-row"><span style={{left:(i*13)%80+"%",width:12+(i%3)*8+"%"}} /></div>)}</div></div><p className="ws-help">Piano-roll layout preview. MIDI note editing is planned; this panel does not generate or save MIDI yet.</p></section>}
+        {!lowerOpen && <button className="ws-restore" onClick={()=>setLowerOpen(true)}>Show detail editor +</button>}
+      </main>
+      {inspectorOpen && <aside className="ws-inspector"><div className="ws-pane-title">CHORD INTELLIGENCE <span>✦</span></div><p className="ws-overline">ANALYSIS STATUS</p><div className="ws-empty-state">♫<strong>Awaiting your song</strong><p>Detected chords, key, and musical structure will appear with processed results.</p></div><div className="ws-divider"/><p className="ws-overline">CHORD PROGRESSION · EXAMPLE</p><div className="ws-chord-grid">{CHORDS.map((chord,i)=><button key={i} className={activeChord===i?"active":""} onClick={()=>setActiveChord(i)}>{chord}</button>)}</div><p className="ws-help">These sample chords are not an analysis of your audio.</p><div className="ws-divider"/><p className="ws-overline">LYRICS</p><p className="ws-help">Synchronized lyrics require a transcription source; the current backend does not provide lyrics.</p></aside>}
+    </div>
+    <section className="ws-import-section" id="import"><div className="ws-import-heading"><div><span className="ws-overline">CONNECT TO YOUR EXISTING BACKEND</span><h2>Import & analyze a song</h2><p>Upload audio or provide a YouTube link. Existing FastAPI processing, stem downloads, chord detection and studio mixer remain available here.</p></div><span className="ws-chip">FASTAPI · SPLEETER · LIBROSA</span></div><UploadForm onError={setError}/>{error && <div role="alert" className="ws-error">{error}<button onClick={()=>setError("")} aria-label="Dismiss error">×</button></div>}</section>
+    <footer className="ws-footer">STEM LAB · MUSIC INTELLIGENCE WORKSTATION <span>Arrangement and piano-roll panels are previews; processing results use live backend data.</span></footer>
+  </div>;
 }
