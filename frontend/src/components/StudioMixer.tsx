@@ -16,6 +16,7 @@ interface TrackState {
   muted: boolean;
   solo: boolean;
   volume: number;
+  pan: number;
 }
 
 const formatTime = (value: number) => {
@@ -28,6 +29,14 @@ const labelFor = (name: string) => name.replace(/\.wav$/i, "").replace(/[_-]/g, 
 
 export default function StudioMixer({ stems, seekRequest, onTimeChange }: StudioMixerProps) {
   const audioRefs = useRef<Array<HTMLAudioElement | null>>([]);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const panNodesRef = useRef<Map<HTMLAudioElement, StereoPannerNode>>(new Map());
+
+  useEffect(() => () => {
+    void audioContextRef.current?.close();
+    audioContextRef.current = null;
+    panNodesRef.current.clear();
+  }, []);
   const onTimeChangeRef = useRef(onTimeChange);
 
   useEffect(() => {
@@ -46,7 +55,7 @@ export default function StudioMixer({ stems, seekRequest, onTimeChange }: Studio
     setTracks((previous) => {
       const next: Record<string, TrackState> = {};
       stems.forEach((stem) => {
-        next[stem.name] = previous[stem.name] || { muted: false, solo: false, volume: 1 };
+        next[stem.name] = previous[stem.name] || { muted: false, solo: false, volume: 1, pan: 0 };
       });
       return next;
     });
@@ -65,9 +74,11 @@ export default function StudioMixer({ stems, seekRequest, onTimeChange }: Studio
     stems.forEach((stem, index) => {
       const audio = audioRefs.current[index];
       if (!audio) return;
-      const track = tracks[stem.name] || { muted: false, solo: false, volume: 1 };
+      const track = tracks[stem.name] || { muted: false, solo: false, volume: 1, pan: 0 };
       audio.volume = track.muted || (hasSolo && !track.solo) ? 0 : track.volume;
       audio.playbackRate = speed;
+      const panner = panNodesRef.current.get(audio);
+      if (panner) panner.pan.value = track.pan;
     });
   }, [stemsKey, tracks, speed]);
 
@@ -95,6 +106,24 @@ export default function StudioMixer({ stems, seekRequest, onTimeChange }: Studio
       return;
     }
     setLoadError("");
+    try {
+      if (!audioContextRef.current) audioContextRef.current = new AudioContext();
+      const context = audioContextRef.current;
+      for (const audio of audioTracks) {
+        if (!panNodesRef.current.has(audio)) {
+          const source = context.createMediaElementSource(audio);
+          const panner = context.createStereoPanner();
+          source.connect(panner).connect(context.destination);
+          panNodesRef.current.set(audio, panner);
+        }
+      }
+      await context.resume();
+      audioTracks.forEach((audio, index) => {
+        panNodesRef.current.get(audio)!.pan.value = tracks[stems[index]?.name]?.pan ?? 0;
+      });
+    } catch {
+      setLoadError("Audio routing is unavailable in this browser. Standard playback will be attempted.");
+    }
     const anchor = audioTracks[0];
     const targetTime = anchor.currentTime;
     audioTracks.forEach((audio) => {
@@ -173,7 +202,7 @@ export default function StudioMixer({ stems, seekRequest, onTimeChange }: Studio
 
       <div className="studio-track-list">
         {stems.map((stem, index) => {
-          const track = tracks[stem.name] || { muted: false, solo: false, volume: 1 };
+          const track = tracks[stem.name] || { muted: false, solo: false, volume: 1, pan: 0 };
           return (
             <article className="studio-track" key={stem.name}>
               <audio
@@ -217,6 +246,10 @@ export default function StudioMixer({ stems, seekRequest, onTimeChange }: Studio
                   <input type="range" min={0} max={1} step={0.01} value={track.volume} aria-label={`${labelFor(stem.name)} volume`} onChange={(event) => updateTrack(stem.name, { volume: Number(event.target.value) })} />
                 </label>
                 <span className="studio-volume-value">{Math.round(track.volume * 100)}%</span>
+                <label className="studio-volume-label">Pan
+                  <input type="range" min={-1} max={1} step={0.05} value={track.pan} aria-label={`${labelFor(stem.name)} stereo pan`} onChange={(event) => updateTrack(stem.name, { pan: Number(event.target.value) })} />
+                </label>
+                <span className="studio-volume-value">{track.pan === 0 ? "C" : `${Math.round(Math.abs(track.pan) * 100)}${track.pan < 0 ? "L" : "R"}`}</span>
                 {stem.downloadUrl && (
                   <a className="studio-track-download" href={stem.downloadUrl} download aria-label={`Download ${labelFor(stem.name)} stem`}>
                     ↓ Download
@@ -227,7 +260,7 @@ export default function StudioMixer({ stems, seekRequest, onTimeChange }: Studio
           );
         })}
       </div>
-      <p className="studio-mixer-footnote">Mixer controls affect playback in this browser session. Original WAV stems remain unchanged and downloadable below.</p>
+      <p className="studio-mixer-footnote">Mixer controls affect playback in this browser session. Volume, mute, solo and stereo pan are non-destructive. Original WAV stems remain unchanged and downloadable below.</p>
     </section>
   );
 }
