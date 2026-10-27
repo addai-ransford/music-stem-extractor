@@ -1,0 +1,24 @@
+
+/* Song-scoped workspaces: only one results panel is visible at a time. */
+.music-workspace{width:min(1380px,100%)}
+.music-view-tabs{flex-wrap:wrap}
+.music-view-tabs button{white-space:nowrap}
+.music-results{padding-top:18px}
+.music-results-toolbar{margin-bottom:14px}
+.music-results .job-panel{border:0;background:transparent;box-shadow:none;padding:0}
+.music-results .job-success{padding:0;text-align:left}
+.session-view-panel[hidden]{display:none!important}
+.session-compact-summary{display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:13px 18px;background:#14232c;border:1px solid #29444b;border-radius:11px;color:#9cb5bc;font-size:12px}
+.session-compact-summary strong{color:#a4eedc}
+.session-compact-summary .session-ready{margin-right:auto}
+.session-view-heading{display:flex;justify-content:space-between;align-items:center;padding:26px 2px 18px}
+.session-view-heading h3{font-size:23px;letter-spacing:-.035em;margin:5px 0 6px}
+.session-view-heading p:last-child{color:#93a3b5;margin:0;font-size:13px}
+.session-view-panel{min-width:0}
+.session-view-panel .daw-session{margin-top:0}
+.session-view-panel .studio-mixer,.session-view-panel .keyboard-studio{margin-top:0}
+.remix-guide,.remix-export-note{padding:20px 22px;border-radius:12px;border:1px solid #344558;background:#15212d;margin-bottom:18px}
+.remix-guide strong,.remix-export-note strong{font-size:14px}
+.remix-guide p,.remix-export-note p{color:#94a6b7;font-size:12px;line-height:1.7;margin-bottom:0}
+.remix-export-note{margin:18px 0;background:#201e2e;border-color:#49405c}
+@media(max-width:700px){.session-compact-summary{gap:9px}.session-compact-summary .session-ready{width:100%}.music-view-tabs{width:100%}.music-view-tabs button{flex:1;padding:10px 8px;font-size:12px}.session-view-heading h3{font-size:20px}}
