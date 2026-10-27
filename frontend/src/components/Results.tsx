@@ -296,9 +296,26 @@ export default function ResultDisplay({ jobId, onStatusChange }: ResultDisplayPr
             <div><p className="eyebrow">YOUR SESSION</p><p className="results-copy">Your track has been separated. Preview each layer below, then download the stems you want.</p></div>
             <span className="session-ready"><span aria-hidden="true">●</span> Ready</span>
           </div>
-          <section className="original-player-panel" aria-label="Original full song player">
-            <div className="chord-panel-heading">
-              <div><p className="eyebrow">ORIGINAL MIX</p><h4>Listen & follow chords</h4></div>
+          <section className="daw-session" aria-label="Song session workspace">
+            <div className="daw-session-toolbar">
+              <div className="daw-session-title">
+                <span className="daw-live-dot" aria-hidden="true" />
+                <div><p className="eyebrow">SESSION VIEW</p><h4>Arrangement & analysis</h4></div>
+              </div>
+              <div className="daw-session-meta"><span>STEMS <strong>{stemFiles.length}</strong></span><span>KEY <strong>{detectedKey || "—"}</strong></span><span>CHORDS <strong>{chords.length}</strong></span></div>
+            </div>
+            <div className="daw-ruler" aria-hidden="true">
+              <span>TRACK</span><div className="daw-ruler-beats"><i>1</i><i>2</i><i>3</i><i>4</i><i>5</i><i>6</i><i>7</i><i>8</i><i>9</i><i>10</i><i>11</i><i>12</i></div>
+            </div>
+            <div className="daw-original-lane">
+              <div className="daw-lane-label"><span className="daw-lane-color daw-lane-original" /><div><strong>Original mix</strong><small>REFERENCE TRACK</small></div></div>
+              <div className="daw-lane-content">
+                <div className="daw-waveform" aria-hidden="true">{Array.from({ length: 72 }, (_, index) => <i key={index} style={{ height: `${18 + ((index * 37 + index * index * 13) % 76)}%` }} />)}</div>
+                <span className="daw-playhead" style={{ left: `${Math.min(100, (currentTime / (originalAudioRef.current?.duration || 1)) * 100)}%` }} aria-hidden="true" />
+              </div>
+            </div>
+            <div className="chord-panel-heading daw-chord-heading">
+              <div><p className="eyebrow">HARMONY LANE</p><h4>Chord timeline</h4></div>
               <span className="chord-live-label">{chords.find((item) => currentTime >= item.start && currentTime < item.end)?.chord || "—"}</span>
             </div>
             <audio
