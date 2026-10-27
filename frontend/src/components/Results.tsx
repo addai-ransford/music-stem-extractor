@@ -351,7 +351,7 @@ export default function ResultDisplay({ jobId, view, onStatusChange }: ResultDis
           </div>
           <div className="session-view-panel" hidden={view !== "MIDI & Remix"}>
             <div className="remix-guide"><div><strong>Record a performance with your song</strong><p>Start the original backing track, then record your keyboard performance against its timeline.</p></div><button className="studio-play-button" type="button" onClick={() => void toggleBackingTrack()}>{backingPlaying ? "Ⅱ Pause backing" : "▶ Play backing"}</button></div>{error && <p role="alert" className="music-error">{error}</p>}
-            <KeyboardStudio currentTime={currentTime} />
+            <KeyboardStudio currentTime={currentTime} active={view === "MIDI & Remix"} />
             <div className="remix-export-note"><strong>Audio mixdown is not available yet.</strong><p>The existing MIDI recorder exports MIDI note data, not audio. Exporting a finished WAV/MP3 with the stems and your new instrument requires an audio-rendering and mixdown feature.</p></div>
           </div>
         </div>
