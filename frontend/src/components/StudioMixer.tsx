@@ -8,6 +8,7 @@ export interface StudioStem {
 
 interface StudioMixerProps {
   stems: StudioStem[];
+  active?: boolean;
   seekRequest?: { time: number; token: number } | null;
   onTimeChange?: (seconds: number) => void;
 }
@@ -27,7 +28,7 @@ const formatTime = (value: number) => {
 
 const labelFor = (name: string) => name.replace(/\.wav$/i, "").replace(/[_-]/g, " ");
 
-export default function StudioMixer({ stems, seekRequest, onTimeChange }: StudioMixerProps) {
+export default function StudioMixer({ stems, active = true, seekRequest, onTimeChange }: StudioMixerProps) {
   const audioRefs = useRef<Array<HTMLAudioElement | null>>([]);
   const audioContextRef = useRef<AudioContext | null>(null);
   const panNodesRef = useRef<Map<HTMLAudioElement, StereoPannerNode>>(new Map());
@@ -49,6 +50,11 @@ export default function StudioMixer({ stems, seekRequest, onTimeChange }: Studio
   const [loop, setLoop] = useState(false);
   const [speed, setSpeed] = useState(1);
   const [loadError, setLoadError] = useState("");
+  useEffect(() => {
+    if (active) return;
+    audioRefs.current.forEach(audio => audio?.pause());
+    setPlaying(false);
+  }, [active]);
   const stemsKey = stems.map((stem) => `${stem.name}:${stem.url}`).join("|");
 
   useEffect(() => {
