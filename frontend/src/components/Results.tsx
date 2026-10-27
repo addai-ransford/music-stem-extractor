@@ -3,8 +3,11 @@ import ChordTimeline, { type ChordSegment } from "./ChordTimeline";
 import StudioMixer from "./StudioMixer";
 import KeyboardStudio from "./KeyboardStudio";
 
+export type SessionView = "Chords" | "Stem Studio" | "MIDI & Remix";
+
 interface ResultDisplayProps {
   jobId: string;
+  view: SessionView;
   onStatusChange?: (status: string) => void;
 }
 
@@ -71,7 +74,7 @@ function statusMessage(status: JobStatus): string {
   return STEPS.find((step) => step.id === status)?.description || "Your audio is being processed.";
 }
 
-export default function ResultDisplay({ jobId, onStatusChange }: ResultDisplayProps) {
+export default function ResultDisplay({ jobId, view, onStatusChange }: ResultDisplayProps) {
   const [status, setStatus] = useState<JobStatus>("queued");
   const [stemFiles, setStemFiles] = useState<StemFile[]>([]);
   const [error, setError] = useState("");
@@ -283,19 +286,9 @@ export default function ResultDisplay({ jobId, onStatusChange }: ResultDisplayPr
         </div>
       ) : finished ? (
         <div className="job-success">
-          <div className="result-icon success-icon" aria-hidden="true">✓</div>
-          <p className="eyebrow">READY TO DOWNLOAD</p>
-          <h3 id="job-panel-title">Your stems are ready</h3>
-          {detectedKey && (
-            <div className="key-result">
-              <span>Detected musical key</span>
-              <strong>{detectedKey}</strong>
-            </div>
-          )}
-          <div className="track-session-heading">
-            <div><p className="eyebrow">YOUR SESSION</p><p className="results-copy">Your track has been separated. Preview each layer below, then download the stems you want.</p></div>
-            <span className="session-ready"><span aria-hidden="true">●</span> Ready</span>
-          </div>
+          <div className="session-compact-summary"><span className="session-ready"><span aria-hidden="true">●</span> Session ready</span><span>{stemFiles.length} stems</span><span>Key: <strong>{detectedKey || "Analyzing…"}</strong></span><span>{chords.length} detected chord changes</span></div>
+          <div className="session-view-heading"><div><p className="eyebrow">{view === "Chords" ? "LEARN & PRACTICE" : view === "Stem Studio" ? "MULTITRACK AUDIO" : "CREATE YOUR OWN PARTS"}</p><h3 id="job-panel-title">{view === "Chords" ? "Follow the chords" : view === "Stem Studio" ? "Separate & mix your tracks" : "Record a MIDI performance"}</h3><p>{view === "Chords" ? "Listen, follow the progression, jump to a chord, and transpose the harmony." : view === "Stem Studio" ? "Play the separated instruments together, mute or solo any part, and download WAV stems." : "Use your computer keyboard, on-screen piano, or a MIDI controller to record a new part."}</p></div></div>
+          <div className="session-view-panel" hidden={view !== "Chords"}>
           <section className="daw-session" aria-label="Song session workspace">
             <div className="daw-session-toolbar">
               <div className="daw-session-title">
@@ -332,7 +325,8 @@ export default function ResultDisplay({ jobId, onStatusChange }: ResultDisplayPr
             {chordWarning && <p className="chord-disclaimer" role="status">{chordWarning}</p>}
             <ChordTimeline chords={chords} currentTime={currentTime} onSeek={seekToChord} originalKey={detectedKey} />
           </section>
-          {filesLoading && <p className="muted-message" role="status">Loading your WAV stems…</p>}
+          </div>
+          <div className="session-view-panel" hidden={view !== "Stem Studio"}>          {filesLoading && <p className="muted-message" role="status">Loading your WAV stems…</p>}
           {!filesLoading && !stemFiles.some((stem) => getStemDownloadUrl(stem.url)) && <p className="muted-message" role="status">{error || "No individual stem files were returned. You can still try the full ZIP archive."}</p>}
           {!filesLoading && stemFiles.some((stem) => getStemDownloadUrl(stem.url)) && (
             <>
@@ -340,12 +334,18 @@ export default function ResultDisplay({ jobId, onStatusChange }: ResultDisplayPr
                 const url = getStemDownloadUrl(stem.url);
                 return url ? [{ name: stem.name, url, downloadUrl: url }] : [];
               })} seekRequest={mixerSeekRequest} onTimeChange={setCurrentTime} />
-              <KeyboardStudio currentTime={currentTime} />
+
             </>
           )}
-          <button className="secondary-button download-all-button" type="button" onClick={downloadZip}>
+                    <button className="secondary-button download-all-button" type="button" onClick={downloadZip}>
             <span aria-hidden="true">⇩</span> Download all stems (.ZIP)
           </button>
+          </div>
+          <div className="session-view-panel" hidden={view !== "MIDI & Remix"}>
+            <div className="remix-guide"><strong>Record a performance over your song</strong><p>Use the Stem Studio view to play your separated tracks, then record your performance here. Your MIDI take can be exported for further production.</p></div>
+            <KeyboardStudio currentTime={currentTime} />
+            <div className="remix-export-note"><strong>Audio mixdown is not available yet.</strong><p>The existing MIDI recorder exports MIDI note data, not audio. Exporting a finished WAV/MP3 with the stems and your new instrument requires an audio-rendering and mixdown feature.</p></div>
+          </div>
         </div>
       ) : (
         <div className="job-progress">
