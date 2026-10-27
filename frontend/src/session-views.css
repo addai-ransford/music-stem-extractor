@@ -22,3 +22,25 @@
 .remix-guide p,.remix-export-note p{color:#94a6b7;font-size:12px;line-height:1.7;margin-bottom:0}
 .remix-export-note{margin:18px 0;background:#201e2e;border-color:#49405c}
 @media(max-width:700px){.session-compact-summary{gap:9px}.session-compact-summary .session-ready{width:100%}.music-view-tabs{width:100%}.music-view-tabs button{flex:1;padding:10px 8px;font-size:12px}.session-view-heading h3{font-size:20px}}
+
+/* Studio refinement: focused chord learning and compact performance controls. */
+.music-workspace-toolbar{align-items:center;padding-bottom:20px}
+.music-heading h1{margin:5px 0 2px}
+.music-heading p{font-size:13px}
+.music-results-toolbar{display:none}
+.music-results{padding-top:22px}
+.music-results .job-success{max-width:none}
+.session-compact-summary{background:linear-gradient(100deg,#12252c,#171e2b);border-color:#28565a}
+.session-view-heading{padding:25px 4px 20px}
+.session-view-heading h3{font-size:26px}
+.session-view-panel .daw-session{border-radius:14px;overflow:hidden}
+.session-view-panel .daw-session-toolbar{padding:15px 20px}
+.chord-focus{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;text-align:center;margin:14px 18px;padding:25px 16px;background:radial-gradient(circle at 50% 0%,#226e6355,#171d2b 72%);border:1px solid #32665d;border-radius:12px}
+.chord-focus strong{font-size:clamp(44px,7vw,72px);line-height:1.1;letter-spacing:-.05em;color:#b5f8df}
+.chord-focus>span:last-child{color:#91a9ad;font-size:12px}
+.session-view-panel .original-audio-player{width:calc(100% - 36px);margin:12px 18px 20px}
+.session-view-panel .studio-mixer{border-radius:14px}
+.session-view-panel .keyboard-studio{border-radius:14px}
+.remix-guide{display:flex;align-items:center;justify-content:space-between;gap:22px;background:linear-gradient(120deg,#172b2f,#171c2a)}
+.remix-guide .studio-play-button{flex-shrink:0}
+@media(max-width:700px){.music-workspace-toolbar{align-items:stretch}.session-view-heading h3{font-size:22px}.remix-guide{flex-direction:column;align-items:stretch}.remix-guide .studio-play-button{width:100%}}
