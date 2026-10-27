@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import UploadForm from "./components/UploadForm";
 import ResultDisplay, { type SessionView } from "./components/Results";
 import "./studio-shell.css";
+import "./session-views.css";
 
 const tabs: SessionView[] = ["Chords", "Stem Studio", "MIDI & Remix"];
 
