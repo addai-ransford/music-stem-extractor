@@ -45,9 +45,9 @@ function makeMidiFile(events: RecordedEvent[]): Blob {
   return new Blob([new Uint8Array([...header, ...chunk])], { type: "audio/midi" });
 }
 
-interface KeyboardStudioProps { currentTime: number; }
+interface KeyboardStudioProps { currentTime: number; active?: boolean; }
 
-export default function KeyboardStudio({ currentTime }: KeyboardStudioProps) {
+export default function KeyboardStudio({ currentTime, active = true }: KeyboardStudioProps) {
   const [midiInputs, setMidiInputs] = useState<MidiInput[]>([]);
   const [selectedMidiId, setSelectedMidiId] = useState("");
   const [midiStatus, setMidiStatus] = useState("Use the on-screen keys or computer keys; connect a MIDI keyboard for hardware input.");
@@ -59,6 +59,7 @@ export default function KeyboardStudio({ currentTime }: KeyboardStudioProps) {
   const voicesRef = useRef<Map<number, { oscillator: OscillatorNode; gain: GainNode }>>(new Map());
   const heldComputerKeys = useRef<Set<string>>(new Set());
   const startedAtRef = useRef(0);
+  const recordStartPositionRef = useRef(0);
   const eventsRef = useRef<RecordedEvent[]>([]);
   const activeNotesRef = useRef<Map<number, number>>(new Map());
   const currentTimeRef = useRef(currentTime);
@@ -92,7 +93,7 @@ export default function KeyboardStudio({ currentTime }: KeyboardStudioProps) {
     }
     setPressedNotes(previous => previous.includes(note) ? previous : [...previous, note]);
     if (recordingRef.current) {
-      const time = Math.max(0, currentTimeRef.current + (performance.now() - startedAtRef.current) / 1000);
+      const time = Math.max(0, recordStartPositionRef.current + (performance.now() - startedAtRef.current) / 1000);
       const event = { time, note, velocity, on: true };
       eventsRef.current = [...eventsRef.current, event]; setEvents(eventsRef.current);
       activeNotesRef.current.set(note, event.time);
@@ -165,6 +166,7 @@ export default function KeyboardStudio({ currentTime }: KeyboardStudioProps) {
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
+      if (!active) return;
       if (event.repeat || event.metaKey || event.ctrlKey || event.altKey) return;
       const target = event.target as HTMLElement | null;
       if (target && (["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName) || target.isContentEditable)) return;
@@ -187,7 +189,7 @@ export default function KeyboardStudio({ currentTime }: KeyboardStudioProps) {
     window.addEventListener("keyup", onKeyUp);
     window.addEventListener("blur", releaseAll);
     return () => { window.removeEventListener("keydown", onKeyDown); window.removeEventListener("keyup", onKeyUp); window.removeEventListener("blur", releaseAll); };
-  }, [noteOn, noteOff]);
+  }, [noteOn, noteOff, active]);
 
   useEffect(() => () => {
     voicesRef.current.forEach(voice => { try { voice.oscillator.stop(); } catch { /* already stopped */ } });
@@ -197,6 +199,7 @@ export default function KeyboardStudio({ currentTime }: KeyboardStudioProps) {
 
   const startRecording = () => {
     eventsRef.current = []; setEvents([]);
+    recordStartPositionRef.current = currentTimeRef.current;
     startedAtRef.current = performance.now();
     recordingRef.current = true;
     setRecording(true);
