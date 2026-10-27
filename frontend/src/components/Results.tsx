@@ -255,6 +255,10 @@ export default function ResultDisplay({ jobId, view, onStatusChange }: ResultDis
     return () => controller.abort();
   }, [jobId, status]);
 
+  useEffect(() => {
+    if (view !== "Chords") originalAudioRef.current?.pause();
+  }, [view]);
+
   const seekToChord = (seconds: number) => {
     setCurrentTime(seconds);
     setMixerSeekRequest((previous) => ({ time: seconds, token: (previous?.token ?? 0) + 1 }));
@@ -330,7 +334,7 @@ export default function ResultDisplay({ jobId, view, onStatusChange }: ResultDis
           {!filesLoading && !stemFiles.some((stem) => getStemDownloadUrl(stem.url)) && <p className="muted-message" role="status">{error || "No individual stem files were returned. You can still try the full ZIP archive."}</p>}
           {!filesLoading && stemFiles.some((stem) => getStemDownloadUrl(stem.url)) && (
             <>
-              <StudioMixer stems={stemFiles.flatMap((stem) => {
+              <StudioMixer active={view === "Stem Studio"} stems={stemFiles.flatMap((stem) => {
                 const url = getStemDownloadUrl(stem.url);
                 return url ? [{ name: stem.name, url, downloadUrl: url }] : [];
               })} seekRequest={mixerSeekRequest} onTimeChange={setCurrentTime} />
