@@ -36,7 +36,7 @@ function isSupportedYouTubeUrl(value: string): boolean {
 }
 
 export default function UploadForm({ onError }: UploadFormProps) {
-  const [mode, setMode] = useState<InputMode>("link");
+  const [mode, setMode] = useState<InputMode>("upload");
   const [file, setFile] = useState<File | null>(null);
   const [url, setUrl] = useState("");
   const [stems, setStems] = useState(4);
@@ -126,6 +126,7 @@ export default function UploadForm({ onError }: UploadFormProps) {
 
   return (
     <div className="upload-flow" aria-busy={loading || processing}>
+      <div className="ws-import-topline"><div><span className="ws-overline">01 / SOURCE</span><h3>Choose your audio source</h3><p>Bring a track into your studio to separate instruments and analyze harmony.</p></div><span className="ws-source-tag">LOCAL PROCESSING WORKFLOW</span></div>
       <div className="mode-switch" role="tablist" aria-label="Choose audio source">
         <button
           type="button"
@@ -137,7 +138,7 @@ export default function UploadForm({ onError }: UploadFormProps) {
           disabled={formDisabled}
           onClick={() => changeMode("upload")}
         >
-          <span aria-hidden="true">↑</span> Upload a file
+          <span aria-hidden="true">↑</span> Upload audio
         </button>
         <button
           type="button"
@@ -149,7 +150,7 @@ export default function UploadForm({ onError }: UploadFormProps) {
           disabled={formDisabled}
           onClick={() => changeMode("link")}
         >
-          <span aria-hidden="true">↗</span> YouTube link
+          <span aria-hidden="true">↗</span> YouTube URL
         </button>
       </div>
 
@@ -176,7 +177,7 @@ export default function UploadForm({ onError }: UploadFormProps) {
             </label>
           ) : (
             <div className="field-group">
-              <label htmlFor="youtube-url">YouTube URL</label>
+              <label htmlFor="youtube-url">Video link</label>
               <input
                 id="youtube-url"
                 className="text-input"
@@ -216,7 +217,7 @@ export default function UploadForm({ onError }: UploadFormProps) {
 
         <div className="form-bottom-row">
           <div className="field-group stem-select-group">
-            <label htmlFor="stem-count">Separation quality</label>
+            <label htmlFor="stem-count">Stem configuration</label>
             <select
               id="stem-count"
               className="text-input stem-select"
@@ -224,13 +225,14 @@ export default function UploadForm({ onError }: UploadFormProps) {
               onChange={(event) => setStems(Number(event.target.value))}
               disabled={formDisabled}
             >
-              <option value={2}>2 stems · Vocals + accompaniment</option>
-              <option value={4}>4 stems · Vocals, bass, drums, other</option>
-              <option value={5}>5 stems · Includes piano</option>
+              <option value={2}>2 tracks · Vocals / Instrumental</option>
+              <option value={4}>4 tracks · Vocals / Bass / Drums / Other</option>
+              <option value={5}>5 tracks · Vocals / Bass / Drums / Piano / Other</option>
             </select>
+            <p className="field-help">Select the number of instrument layers. More stems may take longer to process.</p>
           </div>
           <button className="primary-button" type="submit" disabled={!canSubmit}>
-            {loading ? <><span className="button-spinner" aria-hidden="true" /> Starting…</> : processing ? "Processing…" : "Separate stems"}
+            {loading ? <><span className="button-spinner" aria-hidden="true" /> Starting…</> : processing ? "Processing…" : "Create studio session"}
             {!loading && !processing && <span aria-hidden="true">→</span>}
           </button>
         </div>
