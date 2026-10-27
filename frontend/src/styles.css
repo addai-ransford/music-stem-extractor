@@ -1192,3 +1192,52 @@ input[type="range"] { min-height: 28px; }
   .primary-action, .secondary-action { transition: none; }
   .primary-action:hover, .secondary-action:hover { transform: none; }
 }
+
+
+/* DAW-inspired session view: compact controls, track lanes and beat ruler */
+.daw-session {
+  margin: 22px 0;
+  padding: 16px;
+  overflow: hidden;
+  border: 1px solid #353441;
+  border-radius: 14px;
+  background: #17171d;
+  color: #efedf5;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.025), 0 16px 38px rgba(0,0,0,.18);
+}
+.daw-session-toolbar { display:flex; align-items:center; justify-content:space-between; gap:18px; padding:2px 2px 16px; }
+.daw-session-title { display:flex; align-items:center; gap:12px; }
+.daw-live-dot { width:9px; height:9px; flex:0 0 9px; border-radius:50%; background:#b7ff75; box-shadow:0 0 12px rgba(183,255,117,.55); }
+.daw-session-title .eyebrow { margin:0 0 4px; color:#9d9aa9; font-size:.64rem; letter-spacing:.15em; }
+.daw-session-title h4 { margin:0; font-size:1rem; font-weight:650; }
+.daw-session-meta { display:flex; align-items:center; flex-wrap:wrap; gap:7px; }
+.daw-session-meta span { display:inline-flex; align-items:center; gap:7px; padding:7px 9px; border:1px solid #373641; border-radius:7px; color:#a7a4b2; font-size:.62rem; letter-spacing:.07em; }
+.daw-session-meta strong { color:#eeeaf7; font-size:.72rem; letter-spacing:0; }
+.daw-ruler { display:grid; grid-template-columns:minmax(115px, 21%) minmax(0,1fr); border:1px solid #353440; border-bottom:0; background:#202027; }
+.daw-ruler > span { display:flex; align-items:center; padding:9px 12px; color:#9a97a6; font-size:.61rem; font-weight:700; letter-spacing:.12em; }
+.daw-ruler-beats { display:grid; grid-template-columns:repeat(12,minmax(0,1fr)); border-left:1px solid #3b3945; }
+.daw-ruler-beats i { padding:9px 0; border-left:1px solid #383641; color:#8f8c9b; text-align:center; font-size:.65rem; font-style:normal; font-variant-numeric:tabular-nums; }
+.daw-original-lane { display:grid; grid-template-columns:minmax(115px,21%) minmax(0,1fr); min-height:94px; border:1px solid #353440; background:#202027; }
+.daw-lane-label { display:flex; align-items:center; gap:10px; padding:12px; border-right:1px solid #393743; }
+.daw-lane-color { display:block; width:4px; height:38px; flex:0 0 4px; border-radius:4px; background:#b69cff; box-shadow:0 0 12px rgba(182,156,255,.35); }
+.daw-lane-label strong { display:block; color:#f0edf7; font-size:.76rem; font-weight:650; }
+.daw-lane-label small { display:block; margin-top:5px; color:#8d8999; font-size:.55rem; letter-spacing:.09em; }
+.daw-lane-content { position:relative; display:flex; align-items:center; min-width:0; overflow:hidden; padding:12px 0; background-image:repeating-linear-gradient(to right,transparent 0,transparent calc(8.333% - 1px),rgba(255,255,255,.07) calc(8.333% - 1px),rgba(255,255,255,.07) 8.333%); }
+.daw-waveform { display:flex; align-items:center; justify-content:space-around; gap:2px; width:100%; height:54px; padding:0 4px; opacity:.9; }
+.daw-waveform i { display:block; flex:1 1 2px; max-width:7px; min-width:1px; border-radius:2px; background:linear-gradient(180deg,#d3c4ff,#9272df); opacity:.85; }
+.daw-playhead { position:absolute; z-index:2; top:0; bottom:0; width:2px; background:#b7ff75; box-shadow:0 0 9px rgba(183,255,117,.6); pointer-events:none; }
+.daw-playhead::before { position:absolute; top:0; left:-4px; width:10px; height:7px; background:#b7ff75; content:""; clip-path:polygon(0 0,100% 0,50% 100%); }
+.daw-chord-heading { margin-top:16px; }
+.daw-session .original-audio-player { width:100%; margin:12px 0 16px; accent-color:#b69cff; }
+.daw-session .chord-timeline { margin-top:10px; }
+@media (max-width:700px) {
+  .daw-session { padding:10px; margin-inline:-2px; }
+  .daw-session-toolbar { align-items:flex-start; flex-direction:column; gap:12px; }
+  .daw-session-meta { width:100%; }
+  .daw-session-meta span { flex:1; justify-content:space-between; }
+  .daw-ruler, .daw-original-lane { grid-template-columns:88px minmax(0,1fr); }
+  .daw-lane-label { gap:7px; padding:8px; }
+  .daw-lane-label strong { font-size:.68rem; }
+  .daw-ruler > span { padding-inline:8px; font-size:.55rem; }
+  .daw-waveform { gap:1px; }
+}
