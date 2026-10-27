@@ -1,8 +1,10 @@
-import React, { useCallback, useEffect, useState } from "react";
-import ResultDisplay from "./Results";
+import React, { useEffect, useState } from "react";
+
 
 interface UploadFormProps {
   onError: (msg: string) => void;
+  initialUrl?: string;
+  onJobStarted: (jobId: string) => void;
 }
 
 type InputMode = "upload" | "link";
@@ -35,14 +37,12 @@ function isSupportedYouTubeUrl(value: string): boolean {
   }
 }
 
-export default function UploadForm({ onError }: UploadFormProps) {
-  const [mode, setMode] = useState<InputMode>("upload");
+export default function UploadForm({ onError, initialUrl = "", onJobStarted }: UploadFormProps) {
+  const [mode, setMode] = useState<InputMode>(initialUrl.trim() ? "link" : "upload");
   const [file, setFile] = useState<File | null>(null);
-  const [url, setUrl] = useState("");
+  const [url, setUrl] = useState(initialUrl);
   const [stems, setStems] = useState(4);
   const [loading, setLoading] = useState(false);
-  const [jobId, setJobId] = useState<string | null>(null);
-  const [status, setStatus] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   useEffect(() => {
@@ -55,11 +55,7 @@ export default function UploadForm({ onError }: UploadFormProps) {
     return () => URL.revokeObjectURL(objectUrl);
   }, [file, mode]);
 
-  const handleStatusChange = useCallback((nextStatus: string) => {
-    setStatus(nextStatus);
-  }, []);
-
-  const processing = Boolean(jobId && status !== "done" && status !== "error");
+  const processing = false;
   const formDisabled = loading || processing;
   const fileInvalid = Boolean(file && (!ACCEPTED_EXTENSIONS.test(file.name) || file.size > MAX_FILE_SIZE));
   const inputInvalid = mode === "upload" ? !file || fileInvalid : !url.trim() || !isSupportedYouTubeUrl(url.trim());
@@ -92,8 +88,6 @@ export default function UploadForm({ onError }: UploadFormProps) {
     }
 
     setLoading(true);
-    setJobId(null);
-    setStatus(null);
 
     try {
       const form = new FormData();
@@ -112,8 +106,7 @@ export default function UploadForm({ onError }: UploadFormProps) {
         throw new Error("The server returned an unexpected response. Please try again.");
       }
 
-      setJobId((payload as { job_id: string }).job_id);
-      setStatus("queued");
+      onJobStarted((payload as { job_id: string }).job_id);
     } catch (error) {
       const message = error instanceof Error && error.message === "Failed to fetch"
         ? "Can't reach the processing server. Check that the backend is running, then try again."
@@ -238,7 +231,6 @@ export default function UploadForm({ onError }: UploadFormProps) {
         </div>
       </form>
 
-      {jobId && <ResultDisplay jobId={jobId} onStatusChange={handleStatusChange} />}
     </div>
   );
 }
