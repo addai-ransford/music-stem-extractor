@@ -86,6 +86,7 @@ export default function ResultDisplay({ jobId, view, onStatusChange }: ResultDis
   const [currentTime, setCurrentTime] = useState(0);
   const [mixerSeekRequest, setMixerSeekRequest] = useState<{ time: number; token: number } | null>(null);
   const originalAudioRef = useRef<HTMLAudioElement | null>(null);
+  const [backingPlaying, setBackingPlaying] = useState(false);
   const terminalStatusRef = useRef(false);
   const statusCallbackRef = useRef(onStatusChange);
 
@@ -256,8 +257,16 @@ export default function ResultDisplay({ jobId, view, onStatusChange }: ResultDis
   }, [jobId, status]);
 
   useEffect(() => {
-    if (view !== "Chords") originalAudioRef.current?.pause();
+    if (view !== "Chords" && view !== "MIDI & Remix") originalAudioRef.current?.pause();
   }, [view]);
+
+  const toggleBackingTrack = async () => {
+    const audio = originalAudioRef.current;
+    if (!audio) return;
+    if (!audio.paused) { audio.pause(); return; }
+    try { await audio.play(); }
+    catch { setError("Could not play the original audio. Please check the backend audio file."); }
+  };
 
   const seekToChord = (seconds: number) => {
     setCurrentTime(seconds);
@@ -301,16 +310,7 @@ export default function ResultDisplay({ jobId, view, onStatusChange }: ResultDis
               </div>
               <div className="daw-session-meta"><span>STEMS <strong>{stemFiles.length}</strong></span><span>KEY <strong>{detectedKey || "—"}</strong></span><span>CHORDS <strong>{chords.length}</strong></span></div>
             </div>
-            <div className="daw-ruler" aria-hidden="true">
-              <span>TRACK</span><div className="daw-ruler-beats"><i>1</i><i>2</i><i>3</i><i>4</i><i>5</i><i>6</i><i>7</i><i>8</i><i>9</i><i>10</i><i>11</i><i>12</i></div>
-            </div>
-            <div className="daw-original-lane">
-              <div className="daw-lane-label"><span className="daw-lane-color daw-lane-original" /><div><strong>Original mix</strong><small>REFERENCE TRACK</small></div></div>
-              <div className="daw-lane-content">
-                <div className="daw-waveform" aria-hidden="true">{Array.from({ length: 72 }, (_, index) => <i key={index} style={{ height: `${18 + ((index * 37 + index * index * 13) % 76)}%` }} />)}</div>
-                <span className="daw-playhead" style={{ left: `${Math.min(100, (currentTime / (originalAudioRef.current?.duration || 1)) * 100)}%` }} aria-hidden="true" />
-              </div>
-            </div>
+            <div className="chord-focus"><span className="eyebrow">NOW PLAYING · HARMONY</span><strong>{chords.find(item => currentTime >= item.start && currentTime < item.end)?.chord || "—"}</strong><span>{detectedKey ? `Song key: ${detectedKey}` : "Waiting for key analysis"}</span></div>
             <div className="chord-panel-heading daw-chord-heading">
               <div><p className="eyebrow">HARMONY LANE</p><h4>Chord timeline</h4></div>
               <span className="chord-live-label">{chords.find((item) => currentTime >= item.start && currentTime < item.end)?.chord || "—"}</span>
@@ -323,6 +323,9 @@ export default function ResultDisplay({ jobId, view, onStatusChange }: ResultDis
               src={`${API_BASE_URL}/audio/${encodeURIComponent(jobId)}`}
               onTimeUpdate={(event) => setCurrentTime(event.currentTarget.currentTime)}
               onSeeked={(event) => setCurrentTime(event.currentTarget.currentTime)}
+              onPlay={() => setBackingPlaying(true)}
+              onPause={() => setBackingPlaying(false)}
+              onEnded={() => setBackingPlaying(false)}
             >
               Your browser does not support audio playback.
             </audio>
@@ -330,7 +333,8 @@ export default function ResultDisplay({ jobId, view, onStatusChange }: ResultDis
             <ChordTimeline chords={chords} currentTime={currentTime} onSeek={seekToChord} originalKey={detectedKey} />
           </section>
           </div>
-          <div className="session-view-panel" hidden={view !== "Stem Studio"}>          {filesLoading && <p className="muted-message" role="status">Loading your WAV stems…</p>}
+          <div className="session-view-panel" hidden={view !== "Stem Studio"}>
+          {filesLoading && <p className="muted-message" role="status">Loading your WAV stems…</p>}
           {!filesLoading && !stemFiles.some((stem) => getStemDownloadUrl(stem.url)) && <p className="muted-message" role="status">{error || "No individual stem files were returned. You can still try the full ZIP archive."}</p>}
           {!filesLoading && stemFiles.some((stem) => getStemDownloadUrl(stem.url)) && (
             <>
@@ -341,12 +345,12 @@ export default function ResultDisplay({ jobId, view, onStatusChange }: ResultDis
 
             </>
           )}
-                    <button className="secondary-button download-all-button" type="button" onClick={downloadZip}>
+          <button className="secondary-button download-all-button" type="button" onClick={downloadZip}>
             <span aria-hidden="true">⇩</span> Download all stems (.ZIP)
           </button>
           </div>
           <div className="session-view-panel" hidden={view !== "MIDI & Remix"}>
-            <div className="remix-guide"><strong>Record a performance over your song</strong><p>Use the Stem Studio view to play your separated tracks, then record your performance here. Your MIDI take can be exported for further production.</p></div>
+            <div className="remix-guide"><div><strong>Record a performance with your song</strong><p>Start the original backing track, then record your keyboard performance against its timeline.</p></div><button className="studio-play-button" type="button" onClick={() => void toggleBackingTrack()}>{backingPlaying ? "Ⅱ Pause backing" : "▶ Play backing"}</button></div>{error && <p role="alert" className="music-error">{error}</p>}
             <KeyboardStudio currentTime={currentTime} />
             <div className="remix-export-note"><strong>Audio mixdown is not available yet.</strong><p>The existing MIDI recorder exports MIDI note data, not audio. Exporting a finished WAV/MP3 with the stems and your new instrument requires an audio-rendering and mixdown feature.</p></div>
           </div>
