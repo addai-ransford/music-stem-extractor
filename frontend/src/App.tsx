@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import UploadForm from "./components/UploadForm";
+import ResultDisplay from "./components/Results";
 import "./workstation.css";
 import "./import-studio.css";
 
@@ -17,6 +18,7 @@ export default function App() {
   const [view, setView] = useState<View>("Arrange");
   const [importOpen, setImportOpen] = useState(false);
   const [songUrl, setSongUrl] = useState("");
+  const [jobId, setJobId] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [browserOpen, setBrowserOpen] = useState(true);
   const [inspectorOpen, setInspectorOpen] = useState(true);
@@ -63,8 +65,8 @@ export default function App() {
       </main>
       {inspectorOpen && <aside className="ws-inspector"><div className="ws-pane-title">CHORD INTELLIGENCE <span>✦</span></div><p className="ws-overline">ANALYSIS STATUS</p><div className="ws-empty-state">♫<strong>Awaiting your song</strong><p>Detected chords, key, and musical structure will appear with processed results.</p></div><div className="ws-divider"/><p className="ws-overline">CHORD PROGRESSION · EXAMPLE</p><div className="ws-chord-grid">{CHORDS.map((chord,i)=><button key={i} className={activeChord===i?"active":""} onClick={()=>setActiveChord(i)}>{chord}</button>)}</div><p className="ws-help">These sample chords are not an analysis of your audio.</p><div className="ws-divider"/><p className="ws-overline">LYRICS</p><p className="ws-help">Synchronized lyrics require a transcription source; the current backend does not provide lyrics.</p></aside>}
     </div>
-    {importOpen && <div className="ws-import-overlay" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setImportOpen(false); }}><section className="ws-import-dialog" role="dialog" aria-modal="true" aria-label="Import a song"><div className="ws-dialog-header"><div><span className="ws-overline">NEW STUDIO SESSION</span><h2>Import your song</h2></div><button type="button" onClick={() => setImportOpen(false)} aria-label="Close import dialog">×</button></div><div className="ws-import-section" id="import"><UploadForm onError={setError} initialUrl={songUrl} onJobStarted={() => setImportOpen(false)} />{error && <div role="alert" className="ws-error">{error}<button onClick={() => setError("")} aria-label="Dismiss error">×</button></div>}</div></section></div>}
-    <section className="ws-session-output" aria-label="Processed song session"><div className="ws-output-header"><span className="ws-overline">SESSION AUDIO & ANALYSIS</span><p>Processing and playback results appear here after importing a song.</p></div><div id="ws-session-results" /></section>
+    {importOpen && <div className="ws-import-overlay" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setImportOpen(false); }}><section className="ws-import-dialog" role="dialog" aria-modal="true" aria-label="Import a song"><div className="ws-dialog-header"><div><span className="ws-overline">NEW STUDIO SESSION</span><h2>Import your song</h2></div><button type="button" onClick={() => setImportOpen(false)} aria-label="Close import dialog">×</button></div><div className="ws-import-section" id="import"><UploadForm onError={setError} initialUrl={songUrl} onJobStarted={(id) => { setJobId(id); setImportOpen(false); }} />{error && <div role="alert" className="ws-error">{error}<button onClick={() => setError("")} aria-label="Dismiss error">×</button></div>}</div></section></div>}
+    <section className="ws-session-output" aria-label="Processed song session"><div className="ws-output-header"><span className="ws-overline">SESSION AUDIO & ANALYSIS</span><p>Processing and playback results appear here after importing a song.</p></div>{jobId ? <ResultDisplay key={jobId} jobId={jobId} /> : <div className="ws-output-empty">No song loaded yet. Use the song field above or choose Upload song to start.</div>}</section>
     <footer className="ws-footer">STEM LAB · MUSIC INTELLIGENCE WORKSTATION <span>Arrangement and piano-roll panels are previews; processing results use live backend data.</span></footer>
   </div>;
 }
