@@ -3,6 +3,7 @@ import UploadForm from "./components/UploadForm";
 import ResultDisplay from "./components/Results";
 import "./workstation.css";
 import "./import-studio.css";
+import "./unified-workstation.css";
 
 type View = "Arrange" | "Session" | "Chords" | "Mix" | "Practice";
 const VIEWS: View[] = ["Arrange", "Session", "Chords", "Mix", "Practice"];
