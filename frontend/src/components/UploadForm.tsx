@@ -59,11 +59,6 @@ export default function UploadForm({ onError, initialUrl = "", onJobStarted }: U
   const fileInvalid = Boolean(file && (!ACCEPTED_EXTENSIONS.test(file.name) || file.size > MAX_FILE_SIZE));
   const inputInvalid = mode === "upload" ? !file || fileInvalid : !url.trim() || !isSupportedYouTubeUrl(url.trim());
   const canSubmit = !formDisabled && !inputInvalid;
-  const stemOptions = [
-    { count: 2, title: "Essential", subtitle: "Vocals + instrumental", icon: "◫" },
-    { count: 4, title: "Standard", subtitle: "Vocals, drums, bass + other", icon: "♫" },
-    { count: 5, title: "Detailed", subtitle: "Adds a separate piano stem", icon: "♬" },
-  ] as const;
 
   function changeMode(nextMode: InputMode) {
     setMode(nextMode);
@@ -123,7 +118,7 @@ export default function UploadForm({ onError, initialUrl = "", onJobStarted }: U
 
   return (
     <div className="upload-flow new-song-form" aria-busy={loading}>
-      <div className="ws-import-topline"><div><span className="ws-overline">STEP 1 · AUDIO SOURCE</span><h3>Where is your song?</h3><p>Upload your own file or use a public YouTube link.</p></div></div>
+      
       <div className="mode-switch" role="tablist" aria-label="Choose audio source">
         <button
           type="button"
@@ -199,7 +194,7 @@ export default function UploadForm({ onError, initialUrl = "", onJobStarted }: U
               <audio className="original-audio-player" controls preload="metadata" src={previewUrl}>
                 Your browser does not support audio playback.
               </audio>
-              <p className="field-help">Preview the original file before processing. Chords will be shown on the results screen.</p>
+              
             </div>
           )}
           <p id="file-help" className="field-help">
@@ -212,24 +207,17 @@ export default function UploadForm({ onError, initialUrl = "", onJobStarted }: U
           )}
         </div>
 
-        <div className="new-song-stems">
-          <div className="new-song-section-heading"><div><span className="ws-overline">STEP 2 · SEPARATION</span><h3>Choose your stems</h3><p>Separate your song into editable instrument layers.</p></div><span className="new-song-selection">{stems} tracks</span></div>
-          <div className="new-song-stem-options" role="radiogroup" aria-label="Stem configuration">
-            {stemOptions.map(option => <label key={option.count} className={stems === option.count ? "new-song-stem-option is-selected" : "new-song-stem-option"}>
-              <input type="radio" name="stem-count" value={option.count} checked={stems === option.count} disabled={formDisabled} onChange={() => setStems(option.count)} />
-              <span className="new-song-stem-icon" aria-hidden="true">{option.icon}</span>
-              <span className="new-song-stem-copy"><strong>{option.title}</strong><small>{option.subtitle}</small></span>
-              <span className="new-song-stem-count">{option.count}</span>
-            </label>)}
-          </div>
-          <p className="field-help">More stems offer greater control and may take longer to process.</p>
+        <div className="new-song-compact-settings">
+          <label htmlFor="stem-count">Separation quality</label>
+          <select id="stem-count" className="text-input" value={stems} onChange={event => setStems(Number(event.target.value))} disabled={formDisabled}>
+            <option value={2}>2 stems · Vocals + instrumental</option>
+            <option value={4}>4 stems · Vocals, bass, drums + other</option>
+            <option value={5}>5 stems · Adds piano</option>
+          </select>
         </div>
-        <div className="new-song-submit-row">
-          <p><strong>Ready to create?</strong><span>You'll get separated audio, detected chords and a mixing workspace.</span></p>
-          <button className="primary-button" type="submit" disabled={!canSubmit}>
-            {loading ? <><span className="button-spinner" aria-hidden="true" /> Starting session…</> : <>Create session <span aria-hidden="true">→</span></>}
-          </button>
-        </div>
+        <button className="primary-button new-song-create" type="submit" disabled={!canSubmit}>
+          {loading ? <><span className="button-spinner" aria-hidden="true" /> Starting…</> : <>Create session <span aria-hidden="true">→</span></>}
+        </button>
       </form>
 
     </div>
