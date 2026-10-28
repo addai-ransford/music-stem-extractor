@@ -1,0 +1,87 @@
+
+/* Native-feeling mobile shell. Desktop and API behavior stay unchanged. */
+.music-mobile-nav{display:none}
+.music-dialog-grabber{display:none}
+@media (max-width: 700px){
+  html{scroll-padding-top:20px}
+  body{overscroll-behavior-y:contain}
+  .music-app{min-height:100dvh;background:#0b111a;-webkit-tap-highlight-color:transparent}
+  .music-topbar{position:sticky;top:0;z-index:80;display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-rows:52px 48px;gap:7px 12px;padding:calc(env(safe-area-inset-top,0px) + 7px) 16px 11px;height:auto;background:#101a25f5;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:1px solid #253540}
+  .music-brand{font-size:22px;letter-spacing:-.06em}
+  .music-brand-icon{width:36px;height:36px;border-radius:10px}
+  .music-brand small{font-size:7px}
+  .music-topbar>.music-upload{grid-column:2;grid-row:1;min-height:42px;padding:9px 13px;font-size:12px!important;border-radius:12px}
+  .music-search{grid-column:1/-1;grid-row:2;width:100%;height:46px;background:#1d2a36;border:1px solid #314452;border-radius:13px}
+  .music-search input{font-size:16px;color:#f0f6f8;padding-left:14px}
+  .music-search input::placeholder{color:#93a6b5}
+  .music-search button{color:#8bdcd1;min-width:46px}
+  .music-workspace{padding:21px 16px calc(104px + env(safe-area-inset-bottom,0px));width:100%;min-width:0}
+  .music-workspace-toolbar{border:0;padding:0;gap:0}
+  .music-heading h1{font-size:27px;line-height:1.15;margin:5px 0}
+  .music-heading p{font-size:12px;line-height:1.5}
+  .music-heading .music-eyebrow{font-size:9px}
+  .music-view-tabs{display:none}
+  .music-results{padding-top:18px}
+  .session-compact-summary{padding:12px 13px;gap:8px;border-radius:13px;font-size:11px}
+  .session-compact-summary>span:not(.session-ready){padding:5px 8px;border:1px solid #29444b;border-radius:7px}
+  .session-view-heading{padding:18px 2px 16px}
+  .session-view-heading h3{font-size:23px}
+  .session-view-heading p:last-child{font-size:12px;line-height:1.55}
+  .session-view-panel,.session-view-panel>*{min-width:0;max-width:100%}
+  .session-view-panel .daw-session,.session-view-panel .studio-mixer,.session-view-panel .keyboard-studio{border-radius:15px}
+  .session-view-panel .daw-session-toolbar{padding:12px}
+  .daw-session-meta{flex-wrap:wrap;gap:5px}
+  .chord-focus{margin:10px;padding:23px 10px;border-radius:14px}
+  .chord-focus strong{font-size:54px}
+  .session-view-panel .original-audio-player{width:calc(100% - 20px);margin:10px}
+  .session-view-panel .studio-mixer,.session-view-panel .keyboard-studio{padding:14px!important}
+  .studio-mixer-heading,.keyboard-studio-heading{gap:8px}
+  .studio-transport{display:grid!important;grid-template-columns:auto auto 1fr auto;align-items:center;gap:10px!important;padding:12px!important}
+  .studio-transport .studio-play-button{grid-column:1/3;min-height:44px}
+  .studio-transport .studio-seek{grid-column:1/-1;grid-row:2;width:100%;min-width:0}
+  .studio-transport .studio-time:first-of-type{grid-column:3;grid-row:1}
+  .studio-transport .studio-time:nth-of-type(2){grid-column:4;grid-row:1}
+  .studio-transport .studio-toggle,.studio-transport .studio-speed{grid-row:3}
+  .studio-transport .studio-toggle{grid-column:1/3;min-height:44px}
+  .studio-transport .studio-speed{grid-column:3/5;justify-self:end}
+  .studio-track{display:grid!important;grid-template-columns:1fr auto;gap:12px!important;padding:14px!important;align-items:center}
+  .studio-track-name{grid-column:1;grid-row:1;min-width:0}
+  .studio-track-controls{grid-column:1/-1;grid-row:2;display:flex!important;flex-wrap:wrap;gap:9px!important;align-items:center}
+  .studio-track-controls .studio-volume-label{flex:1 1 135px;min-width:115px}
+  .studio-track-controls input[type=range]{width:100%;min-width:70px}
+  .studio-track .studio-track-button{min-width:48px;min-height:44px}
+  .studio-track a,.studio-track button{touch-action:manipulation}
+  .studio-track input[type=range],.studio-transport input[type=range]{min-height:28px;accent-color:#73dace}
+  .keyboard-piano{touch-action:none;overflow:hidden}
+  .keyboard-piano-key{touch-action:none;user-select:none;-webkit-user-select:none}
+  .keyboard-record-controls{display:flex;flex-wrap:wrap;gap:9px}
+  .keyboard-record-controls button,.keyboard-tools button,.remix-guide button{min-height:44px}
+  .remix-guide{padding:15px}
+  .music-empty{min-height:calc(100dvh - 330px);padding:28px 8px}
+  .music-empty-art{width:108px;height:108px;border-radius:28px;margin-bottom:20px}
+  .music-empty h2{font-size:29px}
+  .music-empty>p{font-size:13px;line-height:1.7}
+  .music-capabilities{gap:9px;margin-top:27px}
+  .music-capabilities span{padding:7px 9px;border:1px solid #263b45;border-radius:99px}
+  .music-mobile-nav{position:fixed;z-index:90;bottom:0;left:0;right:0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));align-items:start;padding:7px 8px calc(7px + env(safe-area-inset-bottom,0px));min-height:72px;background:#121e2af7;border-top:1px solid #2b404d;backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);box-shadow:0 -12px 35px #0005}
+  .music-mobile-nav button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-height:53px;padding:4px 2px;color:#91a5b3;border:0;background:transparent;border-radius:11px;font-size:10px;font-weight:700;letter-spacing:.01em;touch-action:manipulation}
+  .music-mobile-nav button.is-active{color:#85e6d8;background:#1b353b}
+  .music-mobile-nav-icon{font-size:23px;line-height:1.2;font-weight:600}
+  .music-footer{display:none}
+  .music-dialog-backdrop{align-items:flex-end;padding:0;background:#02080cc9}
+  .music-dialog{width:100%;max-height:calc(100dvh - env(safe-area-inset-top,0px) - 22px);border-radius:22px 22px 0 0;border-bottom:0;overflow:auto;overscroll-behavior:contain;padding-bottom:calc(14px + env(safe-area-inset-bottom,0px));box-shadow:0 -20px 60px #0008}
+  .music-dialog-grabber{display:block;width:40px;height:5px;background:#647985;border-radius:9px;margin:10px auto 0;opacity:.7}
+  .music-dialog-top{padding:15px 19px 0}
+  .music-dialog-top h2{font-size:23px}
+  .music-dialog-top p{font-size:12px}
+  .music-dialog .ws-import-section{padding:16px 16px 18px}
+  .music-dialog input,.music-dialog select,.music-dialog textarea{font-size:16px}
+  .music-close{width:44px;height:44px;flex-shrink:0}
+}
+@media (max-width: 380px){
+  .music-topbar{padding-left:11px;padding-right:11px}
+  .music-topbar>.music-upload{padding:8px 10px;font-size:11px!important}
+  .music-workspace{padding-left:11px;padding-right:11px}
+  .studio-track-controls .studio-volume-label{flex-basis:115px}
+}
+@media (prefers-reduced-motion:reduce){.music-app *{scroll-behavior:auto!important;transition-duration:.01ms!important;animation-duration:.01ms!important}}
