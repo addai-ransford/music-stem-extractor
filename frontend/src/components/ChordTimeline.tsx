@@ -157,12 +157,7 @@ export default function ChordTimeline({ chords, currentTime, onSeek, originalKey
         </span>
       </div>
 
-      {activeChord && <PianoKeyboard chord={activeChord.chord} transpose={transpose} />}
-
-      <div className="chord-key-summary" aria-label="Original and current key">
-        <div><span>ORIGINAL KEY</span><strong>{originalKey || "Not detected"}</strong></div>
-        <div><span>CURRENT KEY</span><strong>{transposeKey(originalKey, transpose)}</strong></div>
-      </div>
+      <PianoKeyboard chord={activeChord?.chord ?? "—"} transpose={transpose} />
 
       <div ref={timelineRef} className="chord-timeline" role="list" aria-label="Detected chords. Select a chord to seek to its start time.">
         {chords.map((segment, index) => {
