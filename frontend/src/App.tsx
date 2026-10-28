@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import UploadForm from "./components/UploadForm";
 import ResultDisplay, { type SessionView } from "./components/Results";
+import "./styles.css";
 import "./studio-shell.css";
 import "./session-views.css";
 import "./native-mobile.css";
