@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 
 
 interface UploadFormProps {
@@ -38,6 +38,7 @@ function isSupportedYouTubeUrl(value: string): boolean {
 }
 
 export default function UploadForm({ onError, initialUrl = "", onJobStarted }: UploadFormProps) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [mode, setMode] = useState<InputMode>(initialUrl.trim() ? "link" : "upload");
   const [file, setFile] = useState<File | null>(null);
   const [url, setUrl] = useState(initialUrl);
@@ -128,7 +129,7 @@ export default function UploadForm({ onError, initialUrl = "", onJobStarted }: U
           aria-controls="source-panel"
           className={mode === "upload" ? "mode-tab is-active" : "mode-tab"}
           disabled={formDisabled}
-          onClick={() => changeMode("upload")}
+          onClick={() => { changeMode("upload"); fileInputRef.current?.click(); }}
         >
           <span aria-hidden="true">↑</span> Upload audio
         </button>
@@ -147,17 +148,11 @@ export default function UploadForm({ onError, initialUrl = "", onJobStarted }: U
       </div>
 
       <form onSubmit={handleSubmit} className="upload-form" noValidate>
-        <div id="source-panel" role="tabpanel" aria-labelledby={mode === "upload" ? "upload-tab" : "link-tab"}>
-          {mode === "upload" ? (
-            <label className={file ? "file-dropzone has-file" : "file-dropzone"} htmlFor="audio-file">
-              <span className="dropzone-icon" aria-hidden="true">⇧</span>
-              <span className="dropzone-title">{file ? file.name : "Tap to choose a song"}</span>
-              <span className="dropzone-copy">
-                {file ? `${(file.size / (1024 * 1024)).toFixed(1)} MB · Tap to change file` : "MP3, WAV, FLAC, M4A and supported audio/video files"}
-              </span>
               <input
+                ref={fileInputRef}
                 id="audio-file"
                 type="file"
+                className="new-song-file-input"
                 accept=".mp3,.wav,.flac,.m4a,.aac,.ogg,.opus,.mp4,.mov,.mkv,.avi,.webm,audio/*,video/*"
                 onChange={(event) => {
                   setFile(event.target.files?.[0] || null);
@@ -166,6 +161,15 @@ export default function UploadForm({ onError, initialUrl = "", onJobStarted }: U
                 disabled={formDisabled}
                 aria-describedby="file-help"
               />
+        <div id="source-panel" role="tabpanel" aria-labelledby={mode === "upload" ? "upload-tab" : "link-tab"}>
+          {mode === "upload" ? (
+            <label className={file ? "file-dropzone has-file" : "file-dropzone"} htmlFor="audio-file">
+              <span className="dropzone-icon" aria-hidden="true">⇧</span>
+              <span className="dropzone-title">{file ? file.name : "Tap to choose a song"}</span>
+              <span className="dropzone-copy">
+                {file ? `${(file.size / (1024 * 1024)).toFixed(1)} MB · Tap to change file` : "MP3, WAV, FLAC, M4A and supported audio/video files"}
+              </span>
+
             </label>
           ) : (
             <div className="field-group">
