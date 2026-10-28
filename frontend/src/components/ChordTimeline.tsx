@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef } from "react";
 
 export interface ChordSegment {
   start: number;
@@ -12,6 +12,7 @@ interface ChordTimelineProps {
   currentTime: number;
   onSeek: (seconds: number) => void;
   originalKey?: string | null;
+  transpose: number;
 }
 
 const CHROMATIC_NOTES = ["C", "C♯", "D", "D♯", "E", "F", "F♯", "G", "G♯", "A", "A♯", "B"];
@@ -114,8 +115,7 @@ function formatTime(seconds: number): string {
   return `${Math.floor(safe / 60)}:${String(safe % 60).padStart(2, "0")}`;
 }
 
-export default function ChordTimeline({ chords, currentTime, onSeek, originalKey }: ChordTimelineProps) {
-  const [transpose, setTranspose] = useState(0);
+export default function ChordTimeline({ chords, currentTime, onSeek, originalKey, transpose }: ChordTimelineProps) {
   const timelineRef = useRef<HTMLDivElement | null>(null);
   const segmentRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
@@ -141,7 +141,7 @@ export default function ChordTimeline({ chords, currentTime, onSeek, originalKey
   return (
     <section className="chord-panel" aria-label="Chord timeline">
       <div className="chord-panel-heading">
-        <div><p className="eyebrow">PLAY ALONG</p><h4>Chord timeline</h4></div>
+        <div><p className="eyebrow">PLAY ALONG</p><h4>Chords & timeline</h4></div>
         <span className="chord-live-label" aria-live="polite" aria-atomic="true">
           {activeChord ? transposeChord(activeChord.chord, transpose) : "—"}
         </span>
@@ -162,17 +162,6 @@ export default function ChordTimeline({ chords, currentTime, onSeek, originalKey
       <div className="chord-key-summary" aria-label="Original and current key">
         <div><span>ORIGINAL KEY</span><strong>{originalKey || "Not detected"}</strong></div>
         <div><span>CURRENT KEY</span><strong>{transposeKey(originalKey, transpose)}</strong></div>
-      </div>
-
-      <div className="transpose-controls" aria-label="Transpose chord display">
-        <span className="transpose-label">TRANSPOSE CHORDS</span>
-        <div className="transpose-stepper">
-          <button type="button" onClick={() => setTranspose((value) => Math.max(-11, value - 1))} disabled={transpose <= -11} aria-label="Transpose down one semitone">−</button>
-          <strong>{transpose === 0 ? "Original key" : `${transpose > 0 ? "+" : ""}${transpose} semitone${Math.abs(transpose) === 1 ? "" : "s"}`}</strong>
-          <button type="button" onClick={() => setTranspose((value) => Math.min(11, value + 1))} disabled={transpose >= 11} aria-label="Transpose up one semitone">+</button>
-          <button type="button" className="transpose-reset" onClick={() => setTranspose(0)} disabled={transpose === 0}>Reset</button>
-        </div>
-        <small>Changes chord names for your preferred key; the audio itself stays unchanged.</small>
       </div>
 
       <div ref={timelineRef} className="chord-timeline" role="list" aria-label="Detected chords. Select a chord to seek to its start time.">
