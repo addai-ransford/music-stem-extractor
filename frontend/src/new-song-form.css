@@ -59,3 +59,24 @@
 .new-song-form .new-song-compact-settings select{min-height:44px!important;padding:9px 12px!important}
 .new-song-form .new-song-create{width:100%;min-height:46px!important}
 @media(max-width:650px){.new-song-form .file-dropzone{min-height:94px!important;padding:12px!important}.new-song-form .new-song-compact-settings{grid-template-columns:1fr;gap:6px;margin:11px 0}.new-song-form .new-song-compact-settings select{min-height:44px!important}.new-song-form .new-song-create{min-height:48px!important}}
+
+/* Keep the entire import action visible on a typical phone screen. */
+.new-song-file-input{position:absolute!important;width:1px!important;height:1px!important;opacity:0!important;pointer-events:none!important;overflow:hidden!important}
+.music-dialog .music-dialog-top{justify-content:flex-end;padding:10px 16px 0}
+.music-dialog .ws-import-section{padding-top:5px}
+.music-dialog .music-close{width:34px;height:34px;font-size:22px}
+.new-song-form .mode-switch{margin-bottom:9px!important}
+.new-song-form .mode-tab{min-height:40px!important}
+.new-song-form .field-group>label{margin-bottom:5px!important}
+.new-song-form .field-group .field-help{font-size:10px}
+.new-song-form .text-input{min-height:43px!important}
+.new-song-form .file-dropzone{min-height:84px!important}
+.new-song-form #file-help:empty{display:none}
+@media(max-width:650px){
+.music-dialog .music-dialog-top{padding:8px 14px 0!important}
+.music-dialog .ws-import-section{padding:5px 14px 14px!important}
+.new-song-form .mode-switch{margin-bottom:8px!important}
+.new-song-form .new-song-compact-settings{margin:8px 0!important}
+.new-song-form .file-dropzone{min-height:80px!important;padding:9px!important}
+.new-song-form .new-song-create{min-height:45px!important}
+}
