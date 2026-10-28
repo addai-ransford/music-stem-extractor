@@ -227,6 +227,7 @@ export default function StudioMixer({ stems, active = true, seekRequest, onTimeC
                 <span className={`studio-track-dot studio-dot-${index % 5}`} aria-hidden="true" />
                 <strong>{labelFor(stem.name)}</strong>
                 <small>{audible ? (track.solo ? "SOLO" : "READY") : "MUTED"} · WAV</small>
+                {stem.downloadUrl && <a className="stem-mobile-download" href={stem.downloadUrl} download aria-label={`Download ${labelFor(stem.name)} WAV`} title="Download WAV">↓</a>}
               </div>
               <div className="stem-channel-meter" aria-label={`${labelFor(stem.name)} output level ${Math.round(effectiveLevel * 100)} percent`}><span style={{ width: `${effectiveLevel * 100}%` }} /></div>
               <div className="studio-track-controls">
