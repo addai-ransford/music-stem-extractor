@@ -4,6 +4,7 @@ import ResultDisplay, { type SessionView } from "./components/Results";
 import "./studio-shell.css";
 import "./session-views.css";
 import "./native-mobile.css";
+import "./new-song-form.css";
 
 const tabs: SessionView[] = ["Chords", "Stem Studio", "MIDI & Remix"];
 const mobileTabMeta: Record<SessionView, { icon: string; label: string }> = {
