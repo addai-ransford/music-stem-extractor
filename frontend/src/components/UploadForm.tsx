@@ -55,11 +55,15 @@ export default function UploadForm({ onError, initialUrl = "", onJobStarted }: U
     return () => URL.revokeObjectURL(objectUrl);
   }, [file, mode]);
 
-  const processing = false;
-  const formDisabled = loading || processing;
+  const formDisabled = loading;
   const fileInvalid = Boolean(file && (!ACCEPTED_EXTENSIONS.test(file.name) || file.size > MAX_FILE_SIZE));
   const inputInvalid = mode === "upload" ? !file || fileInvalid : !url.trim() || !isSupportedYouTubeUrl(url.trim());
   const canSubmit = !formDisabled && !inputInvalid;
+  const stemOptions = [
+    { count: 2, title: "Essential", subtitle: "Vocals + instrumental", icon: "◫" },
+    { count: 4, title: "Standard", subtitle: "Vocals, drums, bass + other", icon: "♫" },
+    { count: 5, title: "Detailed", subtitle: "Adds a separate piano stem", icon: "♬" },
+  ] as const;
 
   function changeMode(nextMode: InputMode) {
     setMode(nextMode);
@@ -118,8 +122,8 @@ export default function UploadForm({ onError, initialUrl = "", onJobStarted }: U
   }
 
   return (
-    <div className="upload-flow" aria-busy={loading || processing}>
-      <div className="ws-import-topline"><div><span className="ws-overline">01 / SOURCE</span><h3>Choose your audio source</h3><p>Bring a track into your studio to separate instruments and analyze harmony.</p></div><span className="ws-source-tag">LOCAL PROCESSING WORKFLOW</span></div>
+    <div className="upload-flow new-song-form" aria-busy={loading}>
+      <div className="ws-import-topline"><div><span className="ws-overline">STEP 1 · AUDIO SOURCE</span><h3>Where is your song?</h3><p>Upload your own file or use a public YouTube link.</p></div></div>
       <div className="mode-switch" role="tablist" aria-label="Choose audio source">
         <button
           type="button"
@@ -152,9 +156,9 @@ export default function UploadForm({ onError, initialUrl = "", onJobStarted }: U
           {mode === "upload" ? (
             <label className={file ? "file-dropzone has-file" : "file-dropzone"} htmlFor="audio-file">
               <span className="dropzone-icon" aria-hidden="true">⇧</span>
-              <span className="dropzone-title">{file ? file.name : "Choose an audio or video file"}</span>
+              <span className="dropzone-title">{file ? file.name : "Tap to choose a song"}</span>
               <span className="dropzone-copy">
-                {file ? `${(file.size / (1024 * 1024)).toFixed(1)} MB · Click to change file` : "MP3, WAV, FLAC, M4A, AAC, OGG, MP4, MOV, MKV or WEBM"}
+                {file ? `${(file.size / (1024 * 1024)).toFixed(1)} MB · Tap to change file` : "MP3, WAV, FLAC, M4A and supported audio/video files"}
               </span>
               <input
                 id="audio-file"
@@ -208,25 +212,22 @@ export default function UploadForm({ onError, initialUrl = "", onJobStarted }: U
           )}
         </div>
 
-        <div className="form-bottom-row">
-          <div className="field-group stem-select-group">
-            <label htmlFor="stem-count">Stem configuration</label>
-            <select
-              id="stem-count"
-              className="text-input stem-select"
-              value={stems}
-              onChange={(event) => setStems(Number(event.target.value))}
-              disabled={formDisabled}
-            >
-              <option value={2}>2 tracks · Vocals / Instrumental</option>
-              <option value={4}>4 tracks · Vocals / Bass / Drums / Other</option>
-              <option value={5}>5 tracks · Vocals / Bass / Drums / Piano / Other</option>
-            </select>
-            <p className="field-help">Select the number of instrument layers. More stems may take longer to process.</p>
+        <div className="new-song-stems">
+          <div className="new-song-section-heading"><div><span className="ws-overline">STEP 2 · SEPARATION</span><h3>Choose your stems</h3><p>Separate your song into editable instrument layers.</p></div><span className="new-song-selection">{stems} tracks</span></div>
+          <div className="new-song-stem-options" role="radiogroup" aria-label="Stem configuration">
+            {stemOptions.map(option => <label key={option.count} className={stems === option.count ? "new-song-stem-option is-selected" : "new-song-stem-option"}>
+              <input type="radio" name="stem-count" value={option.count} checked={stems === option.count} disabled={formDisabled} onChange={() => setStems(option.count)} />
+              <span className="new-song-stem-icon" aria-hidden="true">{option.icon}</span>
+              <span className="new-song-stem-copy"><strong>{option.title}</strong><small>{option.subtitle}</small></span>
+              <span className="new-song-stem-count">{option.count}</span>
+            </label>)}
           </div>
+          <p className="field-help">More stems offer greater control and may take longer to process.</p>
+        </div>
+        <div className="new-song-submit-row">
+          <p><strong>Ready to create?</strong><span>You'll get separated audio, detected chords and a mixing workspace.</span></p>
           <button className="primary-button" type="submit" disabled={!canSubmit}>
-            {loading ? <><span className="button-spinner" aria-hidden="true" /> Starting…</> : processing ? "Processing…" : "Create studio session"}
-            {!loading && !processing && <span aria-hidden="true">→</span>}
+            {loading ? <><span className="button-spinner" aria-hidden="true" /> Starting session…</> : <>Create session <span aria-hidden="true">→</span></>}
           </button>
         </div>
       </form>
