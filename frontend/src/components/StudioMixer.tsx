@@ -31,6 +31,7 @@ const labelFor = (name: string) => name.replace(/\.wav$/i, "").replace(/[_-]/g, 
 export default function StudioMixer({ stems, active = true, seekRequest, onTimeChange }: StudioMixerProps) {
   const audioRefs = useRef<Array<HTMLAudioElement | null>>([]);
   const onTimeChangeRef = useRef(onTimeChange);
+  const lastUiUpdateRef = useRef(0);
 
   useEffect(() => {
     onTimeChangeRef.current = onTimeChange;
@@ -128,14 +129,14 @@ export default function StudioMixer({ stems, active = true, seekRequest, onTimeC
   };
 
   const syncTime = (source: HTMLAudioElement) => {
+    // Do not seek every playing stem on each timeupdate: seeking WAV files
+    // repeatedly causes decoder stalls, audible gaps and mobile UI jank.
+    // Synchronize only when the user explicitly seeks or starts playback.
+    const now = performance.now();
+    if (now - lastUiUpdateRef.current < 180) return;
+    lastUiUpdateRef.current = now;
     setCurrentTime(source.currentTime);
     onTimeChangeRef.current?.(source.currentTime);
-    audioRefs.current.forEach((audio) => {
-      if (!audio || audio === source || audio.paused || !Number.isFinite(audio.duration)) return;
-      if (Math.abs(audio.currentTime - source.currentTime) > 0.22) {
-        try { audio.currentTime = source.currentTime; } catch { /* ignore transient seek errors */ }
-      }
-    });
   };
 
   const toggleSolo = (stem: StudioStem) => {
@@ -200,7 +201,7 @@ export default function StudioMixer({ stems, active = true, seekRequest, onTimeC
                 onTimeUpdate={(event) => {
                   const audio = event.currentTarget;
                   if (index === 0) syncTime(audio);
-                  if (loop && Number.isFinite(audio.duration) && audio.currentTime >= audio.duration - 0.08) {
+                  if (index === 0 && loop && Number.isFinite(audio.duration) && audio.currentTime >= audio.duration - 0.08) {
                     audioRefs.current.forEach((item) => {
                       if (!item) return;
                       item.currentTime = 0;
@@ -211,7 +212,7 @@ export default function StudioMixer({ stems, active = true, seekRequest, onTimeC
                   }
                 }}
                 onEnded={() => {
-                  if (!loop) {
+                  if (index === 0 && !loop) {
                     audioRefs.current.forEach((audio) => audio?.pause());
                     setPlaying(false);
                   }
