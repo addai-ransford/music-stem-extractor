@@ -42,3 +42,20 @@
 .new-song-form .primary-button:hover:not(:disabled){background:#11a397!important}
 .new-song-form .primary-button:disabled{opacity:.48}
 @media(max-width:650px){.new-song-stem-options{grid-template-columns:1fr;gap:8px}.new-song-stem-option{flex-direction:row;align-items:center;min-height:68px;padding:11px 14px;gap:12px}.new-song-stem-icon{width:30px;flex-shrink:0}.new-song-stem-copy{padding-right:30px}.new-song-stem-count{top:50%;transform:translateY(-50%)}.new-song-submit-row{display:block}.new-song-submit-row p{margin-bottom:12px}.new-song-form .primary-button{width:100%!important;min-height:52px!important}.new-song-form .file-dropzone{min-height:140px!important}.new-song-form .ws-import-topline h3{font-size:16px}}
+
+/* Compact new-song flow: one source, one quality setting, one action. */
+.new-song-form .mode-switch{margin-bottom:12px!important}
+.new-song-form .mode-tab{min-height:42px;padding:9px!important}
+.new-song-form .file-dropzone{min-height:100px!important;padding:13px!important;gap:6px!important}
+.new-song-form .dropzone-icon{width:33px;height:33px;font-size:20px!important}
+.new-song-form .dropzone-title{font-size:13px}
+.new-song-form .dropzone-copy{font-size:10px}
+.new-song-form .field-help{margin:5px 0!important}
+.new-song-form .source-preview{margin-top:8px}
+.new-song-form .source-preview .eyebrow{display:none}
+.new-song-form .source-preview audio{height:42px}
+.new-song-form .new-song-compact-settings{display:grid;grid-template-columns:145px minmax(0,1fr);align-items:center;gap:12px;margin:12px 0}
+.new-song-form .new-song-compact-settings label{font-size:12px;font-weight:700;color:#c5d7dd}
+.new-song-form .new-song-compact-settings select{min-height:44px!important;padding:9px 12px!important}
+.new-song-form .new-song-create{width:100%;min-height:46px!important}
+@media(max-width:650px){.new-song-form .file-dropzone{min-height:94px!important;padding:12px!important}.new-song-form .new-song-compact-settings{grid-template-columns:1fr;gap:6px;margin:11px 0}.new-song-form .new-song-compact-settings select{min-height:44px!important}.new-song-form .new-song-create{min-height:48px!important}}
