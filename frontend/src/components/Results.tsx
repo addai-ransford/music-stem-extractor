@@ -282,6 +282,7 @@ export default function ResultDisplay({ jobId, view, onStatusChange }: ResultDis
   };
 
   const activeStepIndex = STEPS.findIndex((step) => step.id === status);
+  const progressPercent = status === "queued" ? 0 : status === "downloading" ? 12 : status === "extracting" ? 45 : status === "key" ? 72 : status === "zipping" ? 90 : 0;
   const activeStepNumber = activeStepIndex >= 0 ? activeStepIndex + 1 : 1;
   const finished = status === "done";
   const failed = status === "error";
@@ -362,12 +363,11 @@ export default function ResultDisplay({ jobId, view, onStatusChange }: ResultDis
               <h3 id="job-panel-title">{status === "queued" ? "Preparing your track" : STEPS.find((step) => step.id === status)?.title || "Working on your track"}</h3>
               <p className="progress-description">{status === "queued" ? "Waiting to begin processing…" : `Step ${activeStepNumber} of ${STEPS.length} · ${STEPS.find((step) => step.id === status)?.description || "Processing your audio"}`}</p>
             </div>
-            <span className="music-progress-badge">{socketState === "reconnecting" ? "Reconnecting" : "Processing"}</span>
+            <strong className="progress-percentage">{progressPercent}%</strong>
           </div>
-          <div className="music-step-list" aria-label="Audio processing steps">
-            {STEPS.map((step, index) => <div key={step.id} className={index < activeStepIndex ? "music-step is-complete" : index === activeStepIndex ? "music-step is-current" : "music-step"}><span aria-hidden="true">{index < activeStepIndex ? "✓" : index + 1}</span><span>{step.title}</span></div>)}
+          <div className="progress-track" role="progressbar" aria-label="Audio processing progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progressPercent}>
+            <div className="progress-track-fill" style={{ width: `${progressPercent}%` }} />
           </div>
-          <div className="music-indeterminate-track" role="status" aria-label="Audio processing in progress"><span /></div>
           <p className="progress-live-note" role="status">
             <span className="progress-pulse" aria-hidden="true"><span /></span>
             {socketState === "reconnecting" ? "Reconnecting to live updates…" : status === "extracting" ? "Separating your audio layers…" : "Working on your track…"}
