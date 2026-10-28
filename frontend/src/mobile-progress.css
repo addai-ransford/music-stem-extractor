@@ -1,0 +1,15 @@
+
+/* Progress feedback based on actual backend stage, not guessed percentages. */
+.music-progress-badge{font-size:11px;font-weight:700;color:#80dacc;background:#163239;border:1px solid #2b5c61;border-radius:99px;padding:7px 12px;white-space:nowrap}
+.music-step-list{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin:24px 0 17px}
+.music-step{display:flex;align-items:center;gap:8px;padding:12px 10px;border-radius:11px;border:1px solid #2b3445;background:#141c28;color:#728397;font-size:12px;min-width:0}
+.music-step>span:first-child{display:grid;place-items:center;flex-shrink:0;width:24px;height:24px;border-radius:50%;background:#283342;font-weight:800}
+.music-step.is-current{color:#e9e5ff;border-color:#7866b7;background:#28223f}
+.music-step.is-current>span:first-child{background:#a98ef3;color:#11111b}
+.music-step.is-complete{color:#9be6c9;border-color:#2d6255;background:#142c29}
+.music-step.is-complete>span:first-child{background:#245e4d}
+.music-indeterminate-track{height:6px;overflow:hidden;border-radius:9px;background:#2b3440}
+.music-indeterminate-track span{display:block;width:36%;height:100%;border-radius:9px;background:linear-gradient(90deg,#5bc7c2,#b6a0ff);animation:music-progress-move 1.8s ease-in-out infinite alternate}
+@keyframes music-progress-move{from{transform:translateX(0)}to{transform:translateX(180%)}}
+@media(max-width:700px){.music-step-list{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:22px 0 16px}.music-step{padding:10px 8px;font-size:11px}.job-progress{padding:18px 3px!important}.progress-heading{align-items:flex-start}.music-progress-badge{font-size:10px}.progress-description{font-size:12px;line-height:1.6}.music-step>span:first-child{width:22px;height:22px}}
+@media(prefers-reduced-motion:reduce){.music-indeterminate-track span{animation:none;width:100%}}
