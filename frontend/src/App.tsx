@@ -3,6 +3,7 @@ import UploadForm from "./components/UploadForm";
 import ResultDisplay, { type SessionView } from "./components/Results";
 import "./studio-shell.css";
 import "./session-views.css";
+import "./stem-studio.css";
 import "./native-mobile.css";
 import "./new-song-form.css";
 
