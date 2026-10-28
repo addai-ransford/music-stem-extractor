@@ -5,6 +5,11 @@ import "./studio-shell.css";
 import "./session-views.css";
 
 const tabs: SessionView[] = ["Chords", "Stem Studio", "MIDI & Remix"];
+const mobileTabMeta: Record<SessionView, { icon: string; label: string }> = {
+  Chords: { icon: "♫", label: "Chords" },
+  "Stem Studio": { icon: "☷", label: "Stems" },
+  "MIDI & Remix": { icon: "♬", label: "Remix" },
+};
 
 export default function App() {
   const [workspace, setWorkspace] = useState<SessionView>("Chords");
@@ -67,11 +72,18 @@ export default function App() {
       </div>}
     </div>
 
+    <nav className="music-mobile-nav" aria-label="Mobile workstation navigation">
+      {tabs.map(tab => <button key={tab} type="button" className={workspace === tab ? "is-active" : ""} aria-current={workspace === tab ? "page" : undefined} onClick={() => { setWorkspace(tab); window.scrollTo({ top: 0, behavior: "smooth" }); }}>
+        <span className="music-mobile-nav-icon" aria-hidden="true">{mobileTabMeta[tab].icon}</span>
+        <span>{mobileTabMeta[tab].label}</span>
+      </button>)}
+      <button type="button" onClick={() => openImport(true)}><span className="music-mobile-nav-icon" aria-hidden="true">＋</span><span>New song</span></button>
+    </nav>
     <footer className="music-footer"><span>STEM LAB</span><span>Powered by your existing audio processing service</span></footer>
 
     {importOpen && <div className="music-dialog-backdrop" onMouseDown={event => { if (event.target === event.currentTarget) setImportOpen(false); }}>
       <div className="music-dialog" ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="music-dialog-title">
-        <div className="music-dialog-top"><div><span className="music-eyebrow">NEW STUDIO SESSION</span><h2 id="music-dialog-title">Add a song</h2><p>Choose an audio source and how you'd like to separate it.</p></div><button className="music-close" type="button" aria-label="Close dialog" onClick={() => setImportOpen(false)}>×</button></div>
+        <div className="music-dialog-grabber" aria-hidden="true" /><div className="music-dialog-top"><div><span className="music-eyebrow">NEW STUDIO SESSION</span><h2 id="music-dialog-title">Add a song</h2><p>Choose an audio source and how you'd like to separate it.</p></div><button className="music-close" type="button" aria-label="Close dialog" onClick={() => setImportOpen(false)}>×</button></div>
         <div className="ws-import-section"><UploadForm key={sourceKey} initialUrl={songUrl} onError={setError} onJobStarted={id => { setJobId(id); setWorkspace("Chords"); setImportOpen(false); }}/>{error && <div className="music-error" role="alert">{error}</div>}</div>
       </div>
     </div>}
