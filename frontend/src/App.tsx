@@ -84,7 +84,7 @@ export default function App() {
     <footer className="music-footer"><span>STEM LAB</span><span>Powered by your existing audio processing service</span></footer>
 
     {importOpen && <div className="music-dialog-backdrop" onMouseDown={event => { if (event.target === event.currentTarget) setImportOpen(false); }}>
-      <div className="music-dialog" ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="music-dialog-title">
+      <div className="music-dialog" ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label="Import song">
         <div className="music-dialog-grabber" aria-hidden="true" /><div className="music-dialog-top"><div><span className="music-eyebrow">NEW STUDIO SESSION</span><h2 id="music-dialog-title">Add a song</h2><p>Choose an audio source and how you'd like to separate it.</p></div><button className="music-close" type="button" aria-label="Close dialog" onClick={() => setImportOpen(false)}>×</button></div>
         <div className="ws-import-section"><UploadForm key={sourceKey} initialUrl={songUrl} onError={setError} onJobStarted={id => { setJobId(id); setWorkspace("Chords"); setImportOpen(false); }}/>{error && <div className="music-error" role="alert">{error}</div>}</div>
       </div>
