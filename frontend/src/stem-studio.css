@@ -1,0 +1,32 @@
+
+/* Stem Studio: compact DAW-style channel strips, optimized for touch. */
+.studio-mixer{padding:20px!important;border:1px solid #2a434b!important;background:#101a24!important;box-shadow:none!important}
+.studio-mixer-heading{display:flex;justify-content:space-between;align-items:center;gap:16px;padding-bottom:17px!important}
+.studio-mixer-heading h4{font-size:20px;letter-spacing:-.035em;margin:3px 0}
+.studio-mixer-description{color:#8fa6b3!important;font-size:12px!important;margin:0}
+.stem-heading-actions{display:flex;align-items:center;gap:9px;flex-shrink:0}
+.stem-reset{border:1px solid #35515b;border-radius:9px;padding:9px 12px;background:#192b35;color:#a9d8d5;font-size:11px;font-weight:750;min-height:38px}
+.stem-reset:hover{background:#23424b}
+.studio-transport{top:12px;position:sticky;display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:13px 15px;margin:14px 0 17px;background:#172733!important;border:1px solid #344d58;border-radius:12px;box-shadow:none!important;backdrop-filter:none!important}
+.studio-play-button{background:#11857d!important;border:1px solid #209e91!important;border-radius:10px!important;color:#fff!important;font-weight:750;box-shadow:none!important}
+.studio-seek{flex:1;min-width:120px;accent-color:#6cd9c9!important}
+.studio-track-list{display:flex;flex-direction:column;gap:9px!important}
+.studio-track.stem-channel{display:grid!important;grid-template-columns:minmax(130px,1fr) minmax(100px,1.5fr) minmax(0,2.5fr);align-items:center;gap:17px;min-height:92px;padding:14px 17px!important;border:1px solid #314450!important;border-radius:12px;background:#17232e!important;transition:border-color .15s,background .15s}
+.studio-track.stem-channel:hover{border-color:#53717c!important;background:#1a2a35!important}
+.studio-track.stem-channel.is-silent{opacity:.66}
+.stem-channel-identity{display:flex;align-items:center;gap:11px;min-width:0;flex-basis:auto!important}
+.stem-channel-identity .studio-track-dot{width:5px!important;height:42px!important;border-radius:5px;background:var(--stem-accent)!important;box-shadow:none!important;flex-shrink:0}
+.stem-channel-identity strong{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-transform:capitalize;font-size:14px!important}
+.stem-channel-identity small{display:block;margin-top:3px;color:#8ea8b3;font-size:9px;letter-spacing:.1em}
+.stem-channel-meter{height:34px;position:relative;overflow:hidden;border-radius:6px;background:repeating-linear-gradient(90deg,#263c45 0,#263c45 calc(10% - 2px),#12222c calc(10% - 2px),#12222c 10%);border:1px solid #334951}
+.stem-channel-meter>span{display:block;height:100%;background:linear-gradient(90deg,var(--stem-accent),transparent);opacity:.65;transition:width .12s linear}
+.stem-channel .studio-track-controls{display:flex!important;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:8px!important;min-width:0;width:100%}
+.stem-channel .studio-track-button{min-width:46px;min-height:40px;border-radius:8px!important;font-weight:750}
+.stem-channel .studio-track-button.is-on{background:#237b77!important;border-color:#5bcdbd!important;color:#fff!important}
+.stem-channel .studio-volume-label{display:flex;align-items:center;gap:7px;flex:1 1 90px;min-width:95px!important;font-size:11px}
+.stem-channel .studio-volume-label input{min-width:60px;max-width:100%;accent-color:#67d2c6!important}
+.stem-channel .studio-volume-value{font-size:11px;min-width:33px;text-align:right;font-variant-numeric:tabular-nums}
+.stem-channel .studio-track-download{min-height:40px;padding:9px 12px;border:1px solid #3c5e65;border-radius:8px;background:#1d343d;color:#a7e4db;font-weight:700;font-size:11px}
+.studio-mixer-footnote{color:#8097a3;font-size:11px;line-height:1.5}
+@media(max-width:1000px){.studio-track.stem-channel{grid-template-columns:minmax(115px,1fr) minmax(90px,1fr);gap:10px}.stem-channel .studio-track-controls{grid-column:1/-1;grid-row:2;justify-content:flex-start}.stem-channel-meter{grid-column:2;grid-row:1}}
+@media(max-width:700px){.studio-mixer{padding:13px!important;border-radius:14px}.studio-mixer-heading{align-items:flex-start;gap:10px}.studio-mixer-heading h4{font-size:18px}.studio-mixer-description{font-size:11px!important}.stem-heading-actions{flex-direction:column;align-items:flex-end;gap:6px}.stem-reset{min-height:38px;padding:7px 10px}.studio-transport{position:static!important;margin:12px 0;padding:12px!important}.studio-track.stem-channel{display:grid!important;grid-template-columns:minmax(0,1fr) minmax(80px,1fr);padding:12px!important;min-height:0;gap:11px}.stem-channel-identity{grid-column:1;grid-row:1}.stem-channel-meter{grid-column:2;grid-row:1;height:25px}.stem-channel .studio-track-controls{grid-column:1/-1;grid-row:2;display:grid!important;grid-template-columns:46px 46px minmax(0,1fr) 36px;gap:8px!important}.stem-channel .studio-volume-label{grid-column:3;min-width:0!important;width:100%;flex:unset}.stem-channel .studio-volume-label input{width:100%;min-width:0}.stem-channel .studio-volume-value{grid-column:4}.stem-channel .studio-track-download{grid-column:1/-1;justify-self:stretch;text-align:center;min-height:40px}.stem-channel .studio-track-button{min-width:44px;min-height:42px}.studio-mixer-footnote{margin-top:12px}}
