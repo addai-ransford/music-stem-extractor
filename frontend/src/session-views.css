@@ -44,3 +44,24 @@
 .remix-guide{display:flex;align-items:center;justify-content:space-between;gap:22px;background:linear-gradient(120deg,#172b2f,#171c2a)}
 .remix-guide .studio-play-button{flex-shrink:0}
 @media(max-width:700px){.music-workspace-toolbar{align-items:stretch}.session-view-heading h3{font-size:22px}.remix-guide{flex-direction:column;align-items:stretch}.remix-guide .studio-play-button{width:100%}}
+
+/* Single chord workspace: compact header controls and one current chord/timeline. */
+.daw-session-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.daw-transpose-control{display:flex;align-items:center;gap:6px;border:1px solid #385f61;background:#163036;border-radius:9px;padding:4px!important;white-space:nowrap}
+.daw-transpose-control>span{display:flex;align-items:center;gap:6px;color:#9ed8d0;font-size:10px;letter-spacing:.04em;padding:0 4px}
+.daw-transpose-control>span strong{color:#e4fdf7;font-size:13px}
+.daw-transpose-control button{display:grid;place-items:center;width:32px;height:32px;border:0;border-radius:7px;background:#265057;color:#e4fdf7;font-size:19px;cursor:pointer;touch-action:manipulation}
+.daw-transpose-control button:disabled{opacity:.35;cursor:not-allowed}
+.daw-transpose-control .daw-transpose-reset{font-size:10px;width:auto;padding:0 8px;background:#273b45}
+.session-view-panel .chord-panel{margin-top:4px}
+.session-view-panel .chord-panel-heading{padding-top:14px}
+.session-view-panel .current-chord-card{margin-top:8px}
+@media(max-width:700px){
+.daw-session-toolbar{align-items:flex-start!important;gap:12px!important}
+.daw-session-meta{width:100%;justify-content:flex-start;gap:7px}
+.daw-transpose-control{margin-left:auto}
+.daw-transpose-control button{width:38px;height:38px}
+.daw-transpose-control>span{font-size:9px}
+.session-view-panel .current-chord-card{padding:18px 12px!important}
+.session-view-panel .chord-panel-heading{padding:12px 0 8px}
+}
