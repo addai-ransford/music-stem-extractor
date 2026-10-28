@@ -134,10 +134,6 @@ export default function ChordTimeline({ chords, currentTime, onSeek, originalKey
     }
   }, [activeIndex]);
 
-  if (!chords.length) {
-    return <p className="muted-message">No confident chord segments were detected for this track.</p>;
-  }
-
   return (
     <section className="chord-panel" aria-label="Chord timeline">
       <div className="chord-panel-heading">
@@ -159,6 +155,7 @@ export default function ChordTimeline({ chords, currentTime, onSeek, originalKey
 
       <PianoKeyboard chord={activeChord?.chord ?? "—"} transpose={transpose} />
 
+      {!chords.length && <p className="muted-message">No chords detected yet. You can still use the keyboard to practice.</p>}
       <div ref={timelineRef} className="chord-timeline" role="list" aria-label="Detected chords. Select a chord to seek to its start time.">
         {chords.map((segment, index) => {
           const active = index === activeIndex;
