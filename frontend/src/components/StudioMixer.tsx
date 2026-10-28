@@ -139,6 +139,8 @@ export default function StudioMixer({ stems, active = true, seekRequest, onTimeC
     onTimeChangeRef.current?.(source.currentTime);
   };
 
+  const resetMix = () => setTracks(Object.fromEntries(stems.map(stem => [stem.name, { muted: false, solo: false, volume: 1, pan: 0 }])));
+  const hasSolo = stems.some(stem => tracks[stem.name]?.solo);
   const toggleSolo = (stem: StudioStem) => {
     const wasSolo = Boolean(tracks[stem.name]?.solo);
     updateTrack(stem.name, { solo: !wasSolo, muted: false });
@@ -152,7 +154,7 @@ export default function StudioMixer({ stems, active = true, seekRequest, onTimeC
           <h4 id="studio-mixer-title">Build your own mix</h4>
           <p className="studio-mixer-description">Play stems together in sync, isolate a part, and shape each track’s level.</p>
         </div>
-        <span className="studio-mixer-count">{stems.length} {stems.length === 1 ? "track" : "tracks"}</span>
+        <div className="stem-heading-actions"><span className="studio-mixer-count">{stems.length} {stems.length === 1 ? "track" : "tracks"}</span><button type="button" className="stem-reset" onClick={resetMix}>Reset mix</button></div>
       </div>
 
       <div className="studio-transport">
@@ -188,8 +190,10 @@ export default function StudioMixer({ stems, active = true, seekRequest, onTimeC
       <div className="studio-track-list">
         {stems.map((stem, index) => {
           const track = tracks[stem.name] || { muted: false, solo: false, volume: 1, pan: 0 };
+          const audible = !track.muted && (!hasSolo || track.solo);
+          const effectiveLevel = audible ? track.volume : 0;
           return (
-            <article className="studio-track" key={stem.name}>
+            <article className={`studio-track stem-channel ${audible ? "is-audible" : "is-silent"}`} key={stem.name} style={{ ["--stem-accent" as string]: ["#5bcdbd", "#bd9cff", "#ffb86b", "#6caeff", "#e48cc9"][index % 5] }}>
               <audio
                 ref={(element) => { audioRefs.current[index] = element; }}
                 src={stem.url}
@@ -219,11 +223,12 @@ export default function StudioMixer({ stems, active = true, seekRequest, onTimeC
                 }}
                 onError={() => setLoadError(`Could not load the ${labelFor(stem.name)} stem. Its individual download may still be available.`)}
               />
-              <div className="studio-track-name">
+              <div className="studio-track-name stem-channel-identity">
                 <span className={`studio-track-dot studio-dot-${index % 5}`} aria-hidden="true" />
                 <strong>{labelFor(stem.name)}</strong>
-                <small>WAV</small>
+                <small>{audible ? (track.solo ? "SOLO" : "READY") : "MUTED"} · WAV</small>
               </div>
+              <div className="stem-channel-meter" aria-label={`${labelFor(stem.name)} output level ${Math.round(effectiveLevel * 100)} percent`}><span style={{ width: `${effectiveLevel * 100}%` }} /></div>
               <div className="studio-track-controls">
                 <button type="button" className={track.muted ? "studio-track-button is-on" : "studio-track-button"} aria-pressed={track.muted} onClick={() => updateTrack(stem.name, { muted: !track.muted })}>Mute</button>
                 <button type="button" className={track.solo ? "studio-track-button is-on" : "studio-track-button"} aria-pressed={track.solo} onClick={() => toggleSolo(stem)}>Solo</button>
@@ -231,10 +236,6 @@ export default function StudioMixer({ stems, active = true, seekRequest, onTimeC
                   <input type="range" min={0} max={1} step={0.01} value={track.volume} aria-label={`${labelFor(stem.name)} volume`} onChange={(event) => updateTrack(stem.name, { volume: Number(event.target.value) })} />
                 </label>
                 <span className="studio-volume-value">{Math.round(track.volume * 100)}%</span>
-                <label className="studio-volume-label">Pan
-                  <input type="range" min={-1} max={1} step={0.05} value={0} disabled title="Stereo pan requires CORS-enabled audio routing" aria-label={`${labelFor(stem.name)} stereo pan (unavailable)`} />
-                </label>
-                <span className="studio-volume-value">{track.pan === 0 ? "C" : `${Math.round(Math.abs(track.pan) * 100)}${track.pan < 0 ? "L" : "R"}`}</span>
                 {stem.downloadUrl && (
                   <a className="studio-track-download" href={stem.downloadUrl} download aria-label={`Download ${labelFor(stem.name)} stem`}>
                     ↓ Download
@@ -245,7 +246,7 @@ export default function StudioMixer({ stems, active = true, seekRequest, onTimeC
           );
         })}
       </div>
-      <p className="studio-mixer-footnote">Volume, mute and solo affect browser playback without changing the WAV files. Stereo pan is temporarily disabled until CORS-safe audio routing is available.</p>
+      <p className="studio-mixer-footnote">Changes to mute, solo and level are non-destructive. Download each original WAV stem at any time.</p>
     </section>
   );
 }
