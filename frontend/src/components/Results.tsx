@@ -87,6 +87,7 @@ export default function ResultDisplay({ jobId, view, onStatusChange }: ResultDis
   const [mixerSeekRequest, setMixerSeekRequest] = useState<{ time: number; token: number } | null>(null);
   const originalAudioRef = useRef<HTMLAudioElement | null>(null);
   const [backingPlaying, setBackingPlaying] = useState(false);
+  const [transpose, setTranspose] = useState(0);
   const terminalStatusRef = useRef(false);
   const statusCallbackRef = useRef(onStatusChange);
 
@@ -299,7 +300,6 @@ export default function ResultDisplay({ jobId, view, onStatusChange }: ResultDis
         </div>
       ) : finished ? (
         <div className="job-success">
-          <div className="session-compact-summary"><span className="session-ready"><span aria-hidden="true">●</span> Session ready</span><span>{stemFiles.length} stems</span><span>Key: <strong>{detectedKey || "Analyzing…"}</strong></span><span>{chords.length} detected chord changes</span></div>
           <div className="session-view-heading"><div><p className="eyebrow">{view === "Chords" ? "LEARN & PRACTICE" : view === "Stem Studio" ? "MULTITRACK AUDIO" : "CREATE YOUR OWN PARTS"}</p><h3 id="job-panel-title">{view === "Chords" ? "Follow the chords" : view === "Stem Studio" ? "Separate & mix your tracks" : "Record a MIDI performance"}</h3><p>{view === "Chords" ? "Listen, follow the progression, jump to a chord, and transpose the harmony." : view === "Stem Studio" ? "Play the separated instruments together, mute or solo any part, and download WAV stems." : "Use your computer keyboard, on-screen piano, or a MIDI controller to record a new part."}</p></div></div>
           <div className="session-view-panel" hidden={view !== "Chords"}>
           <section className="daw-session" aria-label="Song session workspace">
@@ -308,12 +308,7 @@ export default function ResultDisplay({ jobId, view, onStatusChange }: ResultDis
                 <span className="daw-live-dot" aria-hidden="true" />
                 <div><p className="eyebrow">SESSION VIEW</p><h4>Arrangement & analysis</h4></div>
               </div>
-              <div className="daw-session-meta"><span>STEMS <strong>{stemFiles.length}</strong></span><span>KEY <strong>{detectedKey || "—"}</strong></span><span>CHORDS <strong>{chords.length}</strong></span></div>
-            </div>
-            <div className="chord-focus"><span className="eyebrow">NOW PLAYING · HARMONY</span><strong>{chords.find(item => currentTime >= item.start && currentTime < item.end)?.chord || "—"}</strong><span>{detectedKey ? `Song key: ${detectedKey}` : "Waiting for key analysis"}</span></div>
-            <div className="chord-panel-heading daw-chord-heading">
-              <div><p className="eyebrow">HARMONY LANE</p><h4>Chord timeline</h4></div>
-              <span className="chord-live-label">{chords.find((item) => currentTime >= item.start && currentTime < item.end)?.chord || "—"}</span>
+              <div className="daw-session-meta"><span>STEMS <strong>{stemFiles.length}</strong></span><span>KEY <strong>{detectedKey || "—"}</strong></span><div className="daw-transpose-control" aria-label="Transpose chords"><button type="button" onClick={() => setTranspose(value => Math.max(-11, value - 1))} disabled={transpose <= -11} aria-label="Transpose down one semitone">−</button><span>TRANSPOSE <strong>{transpose === 0 ? "0" : `${transpose > 0 ? "+" : ""}${transpose}`}</strong></span><button type="button" onClick={() => setTranspose(value => Math.min(11, value + 1))} disabled={transpose >= 11} aria-label="Transpose up one semitone">+</button>{transpose !== 0 && <button type="button" className="daw-transpose-reset" onClick={() => setTranspose(0)}>Reset</button>}</div></div>
             </div>
             <audio
               ref={originalAudioRef}
@@ -330,7 +325,7 @@ export default function ResultDisplay({ jobId, view, onStatusChange }: ResultDis
               Your browser does not support audio playback.
             </audio>
             {chordWarning && <p className="chord-disclaimer" role="status">{chordWarning}</p>}
-            <ChordTimeline chords={chords} currentTime={currentTime} onSeek={seekToChord} originalKey={detectedKey} />
+            <ChordTimeline chords={chords} currentTime={currentTime} onSeek={seekToChord} originalKey={detectedKey} transpose={transpose} />
           </section>
           </div>
           <div className="session-view-panel" hidden={view !== "Stem Studio"}>
