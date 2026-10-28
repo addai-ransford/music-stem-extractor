@@ -30,14 +30,6 @@ const labelFor = (name: string) => name.replace(/\.wav$/i, "").replace(/[_-]/g, 
 
 export default function StudioMixer({ stems, active = true, seekRequest, onTimeChange }: StudioMixerProps) {
   const audioRefs = useRef<Array<HTMLAudioElement | null>>([]);
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const panNodesRef = useRef<Map<HTMLAudioElement, StereoPannerNode>>(new Map());
-
-  useEffect(() => () => {
-    void audioContextRef.current?.close();
-    audioContextRef.current = null;
-    panNodesRef.current.clear();
-  }, []);
   const onTimeChangeRef = useRef(onTimeChange);
 
   useEffect(() => {
@@ -83,8 +75,6 @@ export default function StudioMixer({ stems, active = true, seekRequest, onTimeC
       const track = tracks[stem.name] || { muted: false, solo: false, volume: 1, pan: 0 };
       audio.volume = track.muted || (hasSolo && !track.solo) ? 0 : track.volume;
       audio.playbackRate = speed;
-      const panner = panNodesRef.current.get(audio);
-      if (panner) panner.pan.value = track.pan;
     });
   }, [stemsKey, tracks, speed]);
 
@@ -112,24 +102,9 @@ export default function StudioMixer({ stems, active = true, seekRequest, onTimeC
       return;
     }
     setLoadError("");
-    try {
-      if (!audioContextRef.current) audioContextRef.current = new AudioContext();
-      const context = audioContextRef.current;
-      for (const audio of audioTracks) {
-        if (!panNodesRef.current.has(audio)) {
-          const source = context.createMediaElementSource(audio);
-          const panner = context.createStereoPanner();
-          source.connect(panner).connect(context.destination);
-          panNodesRef.current.set(audio, panner);
-        }
-      }
-      await context.resume();
-      audioTracks.forEach((audio, index) => {
-        panNodesRef.current.get(audio)!.pan.value = tracks[stems[index]?.name]?.pan ?? 0;
-      });
-    } catch {
-      setLoadError("Audio routing is unavailable in this browser. Standard playback will be attempted.");
-    }
+    // Play HTMLAudioElements directly. Routing remote media through a Web Audio
+    // MediaElementSource can silently output zero audio without CORS headers.
+    // Direct media playback works with ordinary cross-origin WAV URLs.
     const anchor = audioTracks[0];
     const targetTime = anchor.currentTime;
     audioTracks.forEach((audio) => {
@@ -139,10 +114,13 @@ export default function StudioMixer({ stems, active = true, seekRequest, onTimeC
     });
     const results = await Promise.allSettled(audioTracks.map((audio) => audio.play()));
     if (results.every((result) => result.status === "rejected")) {
-      setLoadError("The stems could not be played. Check that the files are still available, then try again.");
+      const firstFailure = results.find((result) => result.status === "rejected");
+      const reason = firstFailure?.status === "rejected" && firstFailure.reason instanceof Error ? firstFailure.reason.message : "Check that the files are available.";
+      setLoadError(`The stems could not be played: ${reason}`);
       setPlaying(false);
     } else {
       setPlaying(true);
+      if (results.some((result) => result.status === "rejected")) setLoadError("Some stems could not be played. Check their audio URLs.");
       results.forEach((result, index) => {
         if (result.status === "rejected") audioTracks[index].pause();
       });
@@ -253,7 +231,7 @@ export default function StudioMixer({ stems, active = true, seekRequest, onTimeC
                 </label>
                 <span className="studio-volume-value">{Math.round(track.volume * 100)}%</span>
                 <label className="studio-volume-label">Pan
-                  <input type="range" min={-1} max={1} step={0.05} value={track.pan} aria-label={`${labelFor(stem.name)} stereo pan`} onChange={(event) => updateTrack(stem.name, { pan: Number(event.target.value) })} />
+                  <input type="range" min={-1} max={1} step={0.05} value={0} disabled title="Stereo pan requires CORS-enabled audio routing" aria-label={`${labelFor(stem.name)} stereo pan (unavailable)`} />
                 </label>
                 <span className="studio-volume-value">{track.pan === 0 ? "C" : `${Math.round(Math.abs(track.pan) * 100)}${track.pan < 0 ? "L" : "R"}`}</span>
                 {stem.downloadUrl && (
@@ -266,7 +244,7 @@ export default function StudioMixer({ stems, active = true, seekRequest, onTimeC
           );
         })}
       </div>
-      <p className="studio-mixer-footnote">Mixer controls affect playback in this browser session. Volume, mute, solo and stereo pan are non-destructive. Original WAV stems remain unchanged and downloadable below.</p>
+      <p className="studio-mixer-footnote">Volume, mute and solo affect browser playback without changing the WAV files. Stereo pan is temporarily disabled until CORS-safe audio routing is available.</p>
     </section>
   );
 }
