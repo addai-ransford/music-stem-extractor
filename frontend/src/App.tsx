@@ -5,6 +5,7 @@ import "./styles.css";
 import "./studio-shell.css";
 import "./session-views.css";
 import "./native-mobile.css";
+import "./mobile-progress.css";
 
 const tabs: SessionView[] = ["Chords", "Stem Studio", "MIDI & Remix"];
 const mobileTabMeta: Record<SessionView, { icon: string; label: string }> = {
