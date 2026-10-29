@@ -1,0 +1,35 @@
+# Cloud Build trigger: connect this repository and set substitutions as needed.
+# Deploys a public Cloud Run service by default; configure app-level auth before using
+# this for private or sensitive audio workflows.
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - --tag
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPOSITORY}/${_SERVICE_NAME}:$COMMIT_SHA
+      - .
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - ${_SERVICE_NAME}
+      - --image=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPOSITORY}/${_SERVICE_NAME}:$COMMIT_SHA
+      - --region=${_REGION}
+      - --platform=managed
+      - --allow-unauthenticated
+      - --port=8080
+      - --cpu=2
+      - --memory=4Gi
+      - --concurrency=1
+      - --max-instances=2
+      - --timeout=3600
+      - --set-env-vars=DATA_DIR=/tmp/data
+images:
+  - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPOSITORY}/${_SERVICE_NAME}:$COMMIT_SHA
+options:
+  logging: CLOUD_LOGGING_ONLY
+substitutions:
+  _REGION: us-central1
+  _AR_REPOSITORY: cloud-run-images
+  _SERVICE_NAME: stem-lab
