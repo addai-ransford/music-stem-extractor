@@ -1,7 +1,7 @@
 # Tested dependency target: Python 3.10 (required by Spleeter/TensorFlow 2.12)
 # Install TensorFlow for your Mac architecture with install-macos.sh before Spleeter.
 fastapi==0.116.1
-uvicorn==0.23.2
+uvicorn[standard]==0.23.2
 python-multipart==0.0.20
 
 # Audio processing
