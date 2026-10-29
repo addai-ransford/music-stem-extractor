@@ -19,7 +19,9 @@ WORKDIR /app
 COPY backend/requirements.txt /app/backend/requirements.txt
 RUN pip install --upgrade pip && \
     pip install -r /app/backend/requirements.txt && \
-    pip install tensorflow-cpu==2.12.0 spleeter==2.4.2
+    pip install tensorflow-cpu==2.12.0 spleeter==2.4.2 && \
+    pip install --upgrade 'typing_extensions>=4.15.0,<5' && \
+    python -c "from typing_extensions import Sentinel; import fastapi; print('FastAPI dependency check passed')"
 COPY backend/ /app/backend/
 COPY --from=frontend-build /app/frontend/dist /app/frontend/dist
 RUN mkdir -p /app/data/stems
