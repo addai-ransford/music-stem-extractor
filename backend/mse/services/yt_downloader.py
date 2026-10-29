@@ -1,44 +1,94 @@
+import os
 import tempfile
+from pathlib import Path
+
 import yt_dlp
+
 from backend.mse.interface.downloader import IAudioDownloader
 
+
 class YTDLDownloader(IAudioDownloader):
-    """
-    Downloader class to fetch audio from a YouTube video using yt-dlp
-    and convert it to WAV format.
+    """Download audio with yt-dlp, optionally using operator-provided cookies.
+
+    YouTube may require an authenticated session for some requests. In production,
+    provide a valid Netscape-format cookies file through YOUTUBE_COOKIES_FILE,
+    ideally mounted from the deployment platform's secret manager. Never commit
+    cookies to the repository or log their contents.
     """
 
     def download(self, url: str) -> str:
-        """
-        Download the audio from a given YouTube URL as a WAV file.
-        Args:
-            url (str): The URL of the YouTube video to download.
-        Returns:
-            str: Path to the downloaded WAV file.
-        """
-
-        # Create a temporary directory to store the downloaded audio
+        """Download the best available audio and convert it to WAV."""
         tmp = tempfile.mkdtemp(prefix="ytdl_")
-        # Set options for yt-dlp
+        output_template = str(Path(tmp) / "source.%(ext)s")
+
         opts = {
-            "format": "bestaudio/best",  # Download the best available audio
-            "outtmpl": f"{tmp}/%(title)s.%(ext)s",  # Save template in temp folder
-            "noplaylist": True,  # Ignore playlists, download only the video
+            "format": "bestaudio/best",
+            "outtmpl": output_template,
+            "noplaylist": True,
+            "restrictfilenames": True,
+            "quiet": True,
+            "no_warnings": True,
             "postprocessors": [
                 {
-                    "key": "FFmpegExtractAudio",  # Convert to audio using FFmpeg
-                    "preferredcodec": "wav"       # Convert to WAV format
+                    "key": "FFmpegExtractAudio",
+                    "preferredcodec": "wav",
                 }
-            ]
+            ],
         }
 
-        # Download the audio using yt-dlp
-        with yt_dlp.YoutubeDL(opts) as ydl:
-            info = ydl.extract_info(url, download=True)
+        cookies_file = os.environ.get("YOUTUBE_COOKIES_FILE", "").strip()
+        if cookies_file:
+            cookie_path = Path(cookies_file).expanduser()
+            if not cookie_path.is_file():
+                raise RuntimeError(
+                    "YouTube cookie authentication is configured, but "
+                    "YOUTUBE_COOKIES_FILE does not point to a readable file. "
+                    "Mount a valid Netscape-format cookies file from your "
+                    "deployment secret manager, or upload an audio file instead."
+                )
+            opts["cookiefile"] = str(cookie_path)
 
-            # Prepare the filename based on info and change extension to .wav
-            filename = ydl.prepare_filename(info)
-            wav_file = filename.rsplit(".", 1)[0] + ".wav"
+        try:
+            with yt_dlp.YoutubeDL(opts) as ydl:
+                info = ydl.extract_info(url, download=True)
+                if not info:
+                    raise RuntimeError("YouTube did not return video information.")
 
-            # Return the path to the WAV file
-            return wav_file
+                filename = Path(ydl.prepare_filename(info))
+                wav_file = filename.with_suffix(".wav")
+                if not wav_file.is_file():
+                    # yt-dlp's output template may resolve to a different
+                    # extension after post-processing; find the produced WAV.
+                    candidates = list(Path(tmp).glob("*.wav"))
+                    if not candidates:
+                        raise RuntimeError(
+                            "yt-dlp finished without producing an audio WAV file."
+                        )
+                    wav_file = candidates[0]
+                return str(wav_file)
+        except Exception as exc:
+            message = str(exc)
+            lower_message = message.lower()
+            if (
+                "sign in to confirm you're not a bot" in lower_message
+                or "use --cookies-from-browser" in lower_message
+                or "confirm you're not a bot" in lower_message
+            ):
+                if cookies_file:
+                    guidance = (
+                        "YouTube rejected the configured session cookies. "
+                        "Refresh the YOUTUBE_COOKIES_FILE secret with a valid, "
+                        "recent Netscape-format cookies export, and ensure it "
+                        "belongs to an account allowed to access this video."
+                    )
+                else:
+                    guidance = (
+                        "This YouTube request requires an authenticated session. "
+                        "For production, configure YOUTUBE_COOKIES_FILE with a "
+                        "valid Netscape-format cookies file mounted from your "
+                        "secret manager. Do not commit cookies to GitHub. "
+                        "If you cannot provide authorized cookies, upload the "
+                        "audio file directly instead."
+                    )
+                raise RuntimeError(guidance) from exc
+            raise RuntimeError(f"Could not download audio from YouTube: {message}") from exc
