@@ -107,3 +107,17 @@ docker run --rm -p 8080:8080 stem-lab
 # In another terminal:
 curl -fsS http://localhost:8080/healthz
 ```
+
+
+### YouTube "Sign in to confirm you're not a bot" errors
+
+YouTube can block automated downloads even when the URL is valid. This is imposed by YouTube and cannot be reliably fixed by retrying or changing the URL. The downloader supports an **optional** operator-provided cookies file:
+
+1. Export cookies for a YouTube session you are authorized to use in Netscape cookies.txt format. Keep the file private and do not commit it to Git.
+2. Store the file as a secret in your hosting platform's secret manager and mount it into the service at a path such as `/secrets/youtube-cookies.txt`.
+3. Set the environment variable `YOUTUBE_COOKIES_FILE=/secrets/youtube-cookies.txt` on the service.
+4. Ensure the runtime service account can access the secret, and periodically refresh the cookies if YouTube expires the session.
+
+For Cloud Run, create a Secret Manager secret (for example `youtube-cookies`), grant the Cloud Run runtime service account `Secret Manager Secret Accessor` on that secret, then use Cloud Run's **Edit and deploy new revision → Variables & Secrets → Volume mounts** to mount the secret as `/secrets/youtube-cookies.txt`. Set `YOUTUBE_COOKIES_FILE` to that exact path. Do not put cookie contents in environment variables, build arguments, logs, or source control.
+
+Cookies do not guarantee access: expired sessions, bot checks, age/region restrictions, or video permissions can still block a download. The app now returns more actionable guidance for this case. The most reliable fallback is to upload an audio file that you have permission to use. Only download or process content you are authorized to access.
