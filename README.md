@@ -73,3 +73,37 @@ From the repository root, create and activate a Python 3.10 virtual environment,
 
 Frontend: http://localhost:3000
 Backend: http://localhost:8000
+
+## Production deployment (Google Cloud Run)
+
+The repository includes a multi-stage `Dockerfile` and `cloudbuild.yaml`. The image builds the Vite frontend and serves it from FastAPI, so production uses one service and one origin.
+
+### One-time setup
+
+1. Create a Google Cloud project and enable billing.
+2. Enable **Cloud Run**, **Cloud Build**, and **Artifact Registry** APIs.
+3. Create an Artifact Registry Docker repository named `cloud-run-images` in `us-central1` (or change `_REGION` and `_AR_REPOSITORY` in `cloudbuild.yaml`).
+4. Grant the Cloud Build service account permission to write to that Artifact Registry repository and deploy Cloud Run services, including permission to act as the runtime service account.
+5. Connect this GitHub repository to a Cloud Build trigger that uses `cloudbuild.yaml`, or run the build manually from the repository root:
+
+```bash
+gcloud builds submit --config cloudbuild.yaml .
+```
+
+The deploy step currently creates a public service named `stem-lab`. Do not use public unauthenticated deployment for private audio or sensitive workloads without adding application authentication and abuse controls first. The service is configured with 2 CPUs, 4 GiB memory, a single instance, and a 60-minute request timeout because stem separation is memory- and CPU-intensive and job state currently lives in process memory.
+
+### Production limitations to address before scaling
+
+- **Job state is in memory.** A restart loses active job status/results; keep the service at one instance until jobs and status are moved to shared storage/queue.
+- **Cloud Run disk is ephemeral.** Processed stems and uploads are not durable across restarts. Use a Cloud Storage bucket and lifecycle rules for persistent output before treating this as a durable production service.
+- **Resource use:** TensorFlow/Spleeter can exceed 4 GiB for some workloads. If a job runs out of memory, increase Cloud Run memory and review model/runtime usage.
+- The `/healthz` endpoint returns JSON for deployment health checks. It confirms the API process is responding, not that an audio model has completed a real inference.
+
+For a local container smoke test:
+
+```bash
+docker build -t stem-lab .
+docker run --rm -p 8080:8080 stem-lab
+# In another terminal:
+curl -fsS http://localhost:8080/healthz
+```
