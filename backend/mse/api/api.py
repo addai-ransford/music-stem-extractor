@@ -16,6 +16,11 @@ app.add_middleware(
 
 app.include_router(routers.router)
 
+
+@app.get("/healthz", include_in_schema=False)
+def healthz():
+    return {"status": "ok"}
+
 # Serve the production-built React app from the same Cloud Run service.
 _frontend_dist = Path(__file__).resolve().parents[3] / "frontend" / "dist"
 if _frontend_dist.is_dir():
