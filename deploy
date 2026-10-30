@@ -2,40 +2,91 @@
 set -Eeuo pipefail
 
 # One-command deploy to Google Cloud Run.
-# Optional overrides:
-#   PROJECT_ID=my-project REGION=europe-west1 SERVICE=music-stem-extractor ./deploy
-
+# Put an authorized Netscape-format YouTube cookies file at ./cookies.txt,
+# then run ./deploy. Alternatively set YOUTUBE_COOKIES_FILE in .env.
 PROJECT_ID="${PROJECT_ID:-$(gcloud config get-value project 2>/dev/null || true)}"
 REGION="${REGION:-europe-west1}"
 SERVICE="${SERVICE:-music-stem-extractor}"
+SECRET_NAME="${YOUTUBE_COOKIES_SECRET:-youtube-cookies}"
+COOKIE_MOUNT_PATH="/secrets/youtube-cookies.txt"
 
 if ! command -v gcloud >/dev/null 2>&1; then
-  echo "ERROR: Google Cloud CLI (gcloud) is required. Install it from https://cloud.google.com/sdk/docs/install" >&2
+  echo "ERROR: Google Cloud CLI (gcloud) is required." >&2
   exit 1
 fi
 if [[ -z "${PROJECT_ID}" || "${PROJECT_ID}" == "(unset)" ]]; then
   echo "ERROR: No Google Cloud project configured. Run: gcloud config set project YOUR_PROJECT_ID" >&2
-  echo "Or run: PROJECT_ID=YOUR_PROJECT_ID ./deploy" >&2
   exit 1
 fi
 
-echo "Deploying ${SERVICE} to Cloud Run in ${REGION} (project ${PROJECT_ID})..."
-gcloud services enable run.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com --project "${PROJECT_ID}"
-gcloud run deploy "${SERVICE}" \
-  --source . \
-  --project "${PROJECT_ID}" \
-  --region "${REGION}" \
-  --platform managed \
-  --allow-unauthenticated \
-  --memory 4Gi \
-  --cpu 2 \
-  --timeout 3600 \
-  --concurrency 10 \
-  --max 1 \
-  --min 0 \
-  --cpu-boost \
-  --no-cpu-throttling \
+# Read only the YOUTUBE_COOKIES_FILE setting; do not source .env as shell code.
+COOKIE_FILE="${YOUTUBE_COOKIES_FILE:-}"
+if [[ -z "${COOKIE_FILE}" && -f .env ]]; then
+  COOKIE_FILE="$(sed -n 's/^[[:space:]]*YOUTUBE_COOKIES_FILE[[:space:]]*=[[:space:]]*//p' .env | tail -n 1 | sed -e 's/^["\x27]//' -e 's/["\x27]$//' -e 's/[[:space:]]*#.*$//')"
+fi
+COOKIE_FILE="${COOKIE_FILE:-./cookies.txt}"
+if [[ "${COOKIE_FILE}" != /* ]]; then
+  COOKIE_FILE="$PWD/${COOKIE_FILE#./}"
+fi
+
+echo "Enabling required Google Cloud APIs..."
+gcloud services enable run.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com secretmanager.googleapis.com --project "${PROJECT_ID}"
+
+DEPLOY_ARGS=(
+  "${SERVICE}"
+  --source .
+  --project "${PROJECT_ID}"
+  --region "${REGION}"
+  --platform managed
+  --allow-unauthenticated
+  --memory 4Gi
+  --cpu 2
+  --timeout 3600
+  --concurrency 10
+  --max 1
+  --min 0
+  --cpu-boost
+  --no-cpu-throttling
   --set-env-vars "PYTHONUNBUFFERED=1"
+)
+
+# If a local cookie file exists, securely upload it to Secret Manager and mount
+# it at runtime. The cookie contents never enter the image, env vars, or logs.
+if [[ -f "${COOKIE_FILE}" ]]; then
+  echo "Configuring YouTube cookies from ${COOKIE_FILE}..."
+  if ! gcloud secrets describe "${SECRET_NAME}" --project "${PROJECT_ID}" >/dev/null 2>&1; then
+    gcloud secrets create "${SECRET_NAME}" --replication-policy=automatic --project "${PROJECT_ID}"
+  fi
+  gcloud secrets versions add "${SECRET_NAME}" --data-file="${COOKIE_FILE}" --project "${PROJECT_ID}" >/dev/null
+
+  PROJECT_NUMBER="$(gcloud projects describe "${PROJECT_ID}" --format='value(projectNumber)')"
+  RUNTIME_SA="$(gcloud run services describe "${SERVICE}" --project "${PROJECT_ID}" --region "${REGION}" --format='value(spec.template.spec.serviceAccountName)' 2>/dev/null || true)"
+  RUNTIME_SA="${RUNTIME_SA:-${PROJECT_NUMBER}-compute@developer.gserviceaccount.com}"
+  gcloud secrets add-iam-policy-binding "${SECRET_NAME}" \
+    --member="serviceAccount:${RUNTIME_SA}" \
+    --role="roles/secretmanager.secretAccessor" \
+    --project "${PROJECT_ID}" >/dev/null
+
+  DEPLOY_ARGS+=(--update-secrets="${COOKIE_MOUNT_PATH}=${SECRET_NAME}:latest")
+  DEPLOY_ARGS+=(--update-env-vars="YOUTUBE_COOKIES_FILE=${COOKIE_MOUNT_PATH}")
+elif gcloud secrets describe "${SECRET_NAME}" --project "${PROJECT_ID}" >/dev/null 2>&1; then
+  echo "Using existing Secret Manager secret: ${SECRET_NAME}"
+  PROJECT_NUMBER="$(gcloud projects describe "${PROJECT_ID}" --format='value(projectNumber)')"
+  RUNTIME_SA="$(gcloud run services describe "${SERVICE}" --project "${PROJECT_ID}" --region "${REGION}" --format='value(spec.template.spec.serviceAccountName)' 2>/dev/null || true)"
+  RUNTIME_SA="${RUNTIME_SA:-${PROJECT_NUMBER}-compute@developer.gserviceaccount.com}"
+  gcloud secrets add-iam-policy-binding "${SECRET_NAME}" \
+    --member="serviceAccount:${RUNTIME_SA}" \
+    --role="roles/secretmanager.secretAccessor" \
+    --project "${PROJECT_ID}" >/dev/null
+  DEPLOY_ARGS+=(--update-secrets="${COOKIE_MOUNT_PATH}=${SECRET_NAME}:latest")
+  DEPLOY_ARGS+=(--update-env-vars="YOUTUBE_COOKIES_FILE=${COOKIE_MOUNT_PATH}")
+else
+  echo "WARNING: No cookies file found at ${COOKIE_FILE} and no Secret Manager secret named ${SECRET_NAME} exists."
+  echo "The service will deploy, but YouTube may still reject downloads with its bot check."
+fi
+
+echo "Deploying ${SERVICE} to Cloud Run in ${REGION} (project ${PROJECT_ID})..."
+gcloud run deploy "${DEPLOY_ARGS[@]}"
 
 echo
 echo "Deployment finished. Service URL:"
