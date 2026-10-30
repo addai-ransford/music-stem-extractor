@@ -82,7 +82,7 @@ export default function App() {
       </button>)}
       <button type="button" onClick={() => openImport(true)}><span className="music-mobile-nav-icon" aria-hidden="true">＋</span><span>New song</span></button>
     </nav>
-    <footer className="music-footer"><span>STEM LAB</span><span>Powered by your existing audio processing service</span></footer>
+    <footer className="music-footer"><span>STEM LAB</span></footer>
 
     {importOpen && <div className="music-dialog-backdrop" onMouseDown={event => { if (event.target === event.currentTarget) setImportOpen(false); }}>
       <div className="music-dialog" ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label="Import song">
