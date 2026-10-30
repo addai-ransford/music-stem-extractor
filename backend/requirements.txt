@@ -49,4 +49,4 @@ google-auth==2.40.3
 google-auth-oauthlib==1.0.0
 
 # YouTube download
-yt-dlp==2025.9.5
+yt-dlp==2026.10.21
