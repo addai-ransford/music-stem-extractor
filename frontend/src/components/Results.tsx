@@ -358,11 +358,35 @@ export default function ResultDisplay({ jobId, view, onStatusChange }: ResultDis
               <h3 id="job-panel-title">{status === "queued" ? "Preparing your track" : STEPS.find((step) => step.id === status)?.title || "Working on your track"}</h3>
               <p className="progress-description">{status === "queued" ? "Waiting to begin processing…" : `Step ${activeStepNumber} of ${STEPS.length} · ${STEPS.find((step) => step.id === status)?.description || "Processing your audio"}`}</p>
             </div>
-            <strong className="progress-percentage">{progressPercent}%</strong>
+            <strong className="progress-percentage">{status === "extracting" ? "Working…" : `${progressPercent}%`}</strong>
           </div>
-          <div className="progress-track" role="progressbar" aria-label="Audio processing progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progressPercent}>
-            <div className="progress-track-fill" style={{ width: `${progressPercent}%` }} />
+          <div
+            className={`progress-track${status === "extracting" ? " is-indeterminate" : ""}`}
+            role="progressbar"
+            aria-label="Audio processing progress"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            {...(status === "extracting" ? {} : { "aria-valuenow": progressPercent })}
+          >
+            <div className="progress-track-fill" style={status === "extracting" ? undefined : { width: `${progressPercent}%` }} />
           </div>
+          {status === "extracting" && (
+            <style>{`
+              .progress-track.is-indeterminate { overflow: hidden; }
+              .progress-track.is-indeterminate .progress-track-fill {
+                width: 38%;
+                height: 100%;
+                animation: stemlab-progress-sweep 1.6s ease-in-out infinite;
+              }
+              @keyframes stemlab-progress-sweep {
+                0% { transform: translateX(-110%); }
+                100% { transform: translateX(280%); }
+              }
+              @media (prefers-reduced-motion: reduce) {
+                .progress-track.is-indeterminate .progress-track-fill { animation: none; transform: translateX(80%); }
+              }
+            `}</style>
+          )}
           <p className="progress-live-note" role="status">
             <span className="progress-pulse" aria-hidden="true"><span /></span>
             {socketState === "reconnecting" ? "Reconnecting to live updates…" : status === "extracting" ? "Separating your audio layers…" : "Working on your track…"}
