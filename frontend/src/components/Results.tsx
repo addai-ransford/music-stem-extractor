@@ -76,6 +76,7 @@ function statusMessage(status: JobStatus): string {
 
 export default function ResultDisplay({ jobId, view, onStatusChange }: ResultDisplayProps) {
   const [status, setStatus] = useState<JobStatus>("queued");
+  const [extractionElapsed, setExtractionElapsed] = useState(0);
   const [stemFiles, setStemFiles] = useState<StemFile[]>([]);
   const [error, setError] = useState("");
   const [detectedKey, setDetectedKey] = useState<string | null>(null);
@@ -94,6 +95,21 @@ export default function ResultDisplay({ jobId, view, onStatusChange }: ResultDis
   useEffect(() => {
     statusCallbackRef.current = onStatusChange;
   }, [onStatusChange]);
+
+  // Spleeter exposes stage changes, not exact frame-level progress. This is a
+  // conservative estimate that advances during extraction and yields to the
+  // actual server status when extraction completes.
+  useEffect(() => {
+    if (status !== "extracting") {
+      setExtractionElapsed(0);
+      return;
+    }
+    const startedAt = Date.now();
+    const updateElapsed = () => setExtractionElapsed(Math.floor((Date.now() - startedAt) / 1000));
+    updateElapsed();
+    const timer = setInterval(updateElapsed, 1000);
+    return () => clearInterval(timer);
+  }, [status]);
 
   useEffect(() => {
     let disposed = false;
@@ -283,7 +299,8 @@ export default function ResultDisplay({ jobId, view, onStatusChange }: ResultDis
   };
 
   const activeStepIndex = STEPS.findIndex((step) => step.id === status);
-  const progressPercent = status === "queued" ? 0 : status === "downloading" ? 12 : status === "extracting" ? 45 : status === "key" ? 72 : status === "zipping" ? 90 : 0;
+  const extractionEstimate = Math.min(68, 45 + Math.floor(24 * (1 - Math.exp(-extractionElapsed / 90))));
+  const progressPercent = status === "queued" ? 0 : status === "downloading" ? 12 : status === "extracting" ? extractionEstimate : status === "key" ? 72 : status === "zipping" ? 90 : 0;
   const activeStepNumber = activeStepIndex >= 0 ? activeStepIndex + 1 : 1;
   const finished = status === "done";
   const failed = status === "error";
@@ -358,35 +375,11 @@ export default function ResultDisplay({ jobId, view, onStatusChange }: ResultDis
               <h3 id="job-panel-title">{status === "queued" ? "Preparing your track" : STEPS.find((step) => step.id === status)?.title || "Working on your track"}</h3>
               <p className="progress-description">{status === "queued" ? "Waiting to begin processing…" : `Step ${activeStepNumber} of ${STEPS.length} · ${STEPS.find((step) => step.id === status)?.description || "Processing your audio"}`}</p>
             </div>
-            <strong className="progress-percentage">{status === "extracting" ? "Working…" : `${progressPercent}%`}</strong>
+            <strong className="progress-percentage">{progressPercent}%</strong>
           </div>
-          <div
-            className={`progress-track${status === "extracting" ? " is-indeterminate" : ""}`}
-            role="progressbar"
-            aria-label="Audio processing progress"
-            aria-valuemin={0}
-            aria-valuemax={100}
-            {...(status === "extracting" ? {} : { "aria-valuenow": progressPercent })}
-          >
-            <div className="progress-track-fill" style={status === "extracting" ? undefined : { width: `${progressPercent}%` }} />
+          <div className="progress-track" role="progressbar" aria-label="Estimated audio processing progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progressPercent}>
+            <div className="progress-track-fill" style={{ width: `${progressPercent}%` }} />
           </div>
-          {status === "extracting" && (
-            <style>{`
-              .progress-track.is-indeterminate { overflow: hidden; }
-              .progress-track.is-indeterminate .progress-track-fill {
-                width: 38%;
-                height: 100%;
-                animation: stemlab-progress-sweep 1.6s ease-in-out infinite;
-              }
-              @keyframes stemlab-progress-sweep {
-                0% { transform: translateX(-110%); }
-                100% { transform: translateX(280%); }
-              }
-              @media (prefers-reduced-motion: reduce) {
-                .progress-track.is-indeterminate .progress-track-fill { animation: none; transform: translateX(80%); }
-              }
-            `}</style>
-          )}
           <p className="progress-live-note" role="status">
             <span className="progress-pulse" aria-hidden="true"><span /></span>
             {socketState === "reconnecting" ? "Reconnecting to live updates…" : status === "extracting" ? "Separating your audio layers…" : "Working on your track…"}
