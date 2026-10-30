@@ -4,6 +4,7 @@ import shutil
 import tempfile
 import threading
 import uuid
+from concurrent.futures import ThreadPoolExecutor
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException, WebSocket, WebSocketDisconnect, BackgroundTasks
 from fastapi.responses import FileResponse, JSONResponse
 
@@ -90,27 +91,43 @@ def process_stems(job_id: str, stems: int, youtube_url: str = None, file_path: s
         if os.path.abspath(audio_file) != os.path.abspath(original_audio):
             shutil.copy2(audio_file, original_audio)
 
-        # Step 3: Detect key (always fast)
-        jobs[job_id]["status"] = "key"
-        notify(job_id, {"status": "Detecting key..."})
+        # Step 3: Prepare shared analysis inputs after extraction.
+        # These files are independent once Spleeter has finished.
+        original_audio = os.path.join(
+            os.path.dirname(stems_folder),
+            f"{job_id}_original_audio{os.path.splitext(audio_file)[1].lower()}",
+        )
+        if os.path.abspath(audio_file) != os.path.abspath(original_audio):
+            shutil.copy2(audio_file, original_audio)
+
         instrumental = build_instrumental(stems_folder, stems)
-        key = feature_service.detect_key(instrumental)
 
-        # Detect chords from the original full mix (not separated accompaniment).
-        jobs[job_id]["status"] = "chords"
-        notify(job_id, {"status": "Detecting chords from the full song..."})
-        try:
-            chords = feature_service.extract_chords(original_audio)
-        except Exception as chord_error:
-            chords = []
-            jobs[job_id]["chords_error"] = str(chord_error)
+        # Step 4: Run independent post-processing tasks concurrently.
+        # Key detection, chord analysis, and ZIP creation read separate inputs
+        # or outputs, so they can safely overlap after stem extraction.
+        notify(job_id, {
+            "status": "Analysing key and chords while preparing stem downloads..."
+        })
 
-        # Zip stems
-        jobs[job_id]["status"] = "zipping"
-        notify(job_id, {"status": "Zipping stems..."})
-        zip_file = safe_zip_folder(stems_folder, stems_folder + ".zip")
+        chords = []
+        chords_error = None
+        with ThreadPoolExecutor(max_workers=3, thread_name_prefix="stemlab-post") as executor:
+            key_future = executor.submit(feature_service.detect_key, instrumental)
+            chords_future = executor.submit(feature_service.extract_chords, original_audio)
+            zip_future = executor.submit(
+                safe_zip_folder, stems_folder, stems_folder + ".zip"
+            )
 
-        stems_url = f"/download/stems/{job_id}"
+            # Chord analysis is optional: preserve successful key/stem results
+            # even if chord detection fails for a particular recording.
+            try:
+                chords = chords_future.result()
+            except Exception as chord_error:
+                chords_error = str(chord_error)
+
+            # Key detection and archive creation are required for a completed job.
+            key = key_future.result()
+            zip_file = zip_future.result()
 
         jobs[job_id]["status"] = "done"
         jobs[job_id]["result"] = {
@@ -119,10 +136,15 @@ def process_stems(job_id: str, stems: int, youtube_url: str = None, file_path: s
             "stems_folder": stems_folder,
             "instrumental": instrumental,
             "original_audio": original_audio,
-            "chords": chords
+            "chords": chords,
         }
+        if chords_error:
+            jobs[job_id]["chords_error"] = chords_error
         jobs[job_id]["pdf_path"] = None
-        notify(job_id, {"status": "done", "result": jobs[job_id]["result"]})
+        notify(job_id, {
+            "status": "done",
+            "result": jobs[job_id]["result"],
+        })
 
     except Exception as e:
         jobs[job_id]["status"] = "error"
