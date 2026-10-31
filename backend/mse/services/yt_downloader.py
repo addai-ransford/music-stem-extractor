@@ -28,6 +28,9 @@ class YTDLDownloader(IAudioDownloader):
             "restrictfilenames": True,
             "quiet": True,
             "no_warnings": True,
+            # YouTube increasingly requires JavaScript challenge solving to expose formats.
+            "js_runtimes": {"deno": {}},
+            "remote_components": ["ejs:npm"],
             "postprocessors": [
                 {
                     "key": "FFmpegExtractAudio",
@@ -90,5 +93,13 @@ class YTDLDownloader(IAudioDownloader):
                         "If you cannot provide authorized cookies, upload the "
                         "audio file directly instead."
                     )
+                raise RuntimeError(guidance) from exc
+            if "requested format is not available" in lower_message:
+                guidance = (
+                    "YouTube did not provide a downloadable audio format for this video. "
+                    "The video may be restricted or unavailable, or YouTube may have "
+                    "changed its streaming response. Try another public video or upload "
+                    "an audio file instead."
+                )
                 raise RuntimeError(guidance) from exc
             raise RuntimeError(f"Could not download audio from YouTube: {message}") from exc
