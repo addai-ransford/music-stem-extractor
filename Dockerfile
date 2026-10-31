@@ -13,8 +13,10 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
     PORT=8080
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    ffmpeg libsndfile1 build-essential && \
-    rm -rf /var/lib/apt/lists/*
+    ffmpeg libsndfile1 build-essential curl ca-certificates unzip && \
+    rm -rf /var/lib/apt/lists/* && \
+    curl -fsSL https://deno.land/install.sh | DENO_INSTALL=/usr/local sh && \
+    deno --version
 WORKDIR /app
 COPY backend/requirements.txt /app/backend/requirements.txt
 RUN pip install --upgrade pip && \
