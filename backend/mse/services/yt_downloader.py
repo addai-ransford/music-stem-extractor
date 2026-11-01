@@ -1,5 +1,7 @@
+
 import os
 import tempfile
+import traceback
 from pathlib import Path
 
 import yt_dlp
@@ -28,6 +30,10 @@ class YTDLDownloader(IAudioDownloader):
             "restrictfilenames": True,
             "quiet": True,
             "no_warnings": True,
+            # YouTube now often hides playable formats behind JS challenge pages.
+            # Provide the Deno runtime so yt-dlp can solve EJS challenges.
+            "js_runtimes": {"deno": {}},
+            "remote_components": ["ejs:npm"],
             "postprocessors": [
                 {
                     "key": "FFmpegExtractAudio",
@@ -37,38 +43,59 @@ class YTDLDownloader(IAudioDownloader):
         }
 
         cookies_file = os.environ.get("YOUTUBE_COOKIES_FILE", "").strip()
+
         if cookies_file:
             cookie_path = Path(cookies_file).expanduser()
+
             if not cookie_path.is_file():
                 raise RuntimeError(
-                    "YouTube cookie authentication is configured, but "
-                    "YOUTUBE_COOKIES_FILE does not point to a readable file. "
-                    "Mount a valid Netscape-format cookies file from your "
-                    "deployment secret manager, or upload an audio file instead."
+                    "YouTube cookie file is missing or unreadable."
                 )
-            opts["cookiefile"] = str(cookie_path)
+
+            # Secret Manager mounts are read-only.
+            # Copy the cookie file into writable /tmp so yt-dlp can save updates.
+            writable_cookie_file = Path(tmp) / "youtube-cookies.txt"
+            writable_cookie_file.write_bytes(cookie_path.read_bytes())
+
+            opts["cookiefile"] = str(writable_cookie_file)
 
         try:
             with yt_dlp.YoutubeDL(opts) as ydl:
                 info = ydl.extract_info(url, download=True)
+
                 if not info:
-                    raise RuntimeError("YouTube did not return video information.")
+                    raise RuntimeError(
+                        "YouTube did not return video information."
+                    )
 
                 filename = Path(ydl.prepare_filename(info))
                 wav_file = filename.with_suffix(".wav")
+
                 if not wav_file.is_file():
-                    # yt-dlp's output template may resolve to a different
-                    # extension after post-processing; find the produced WAV.
+                    # yt-dlp may use a different extension after post-processing.
                     candidates = list(Path(tmp).glob("*.wav"))
+
                     if not candidates:
                         raise RuntimeError(
                             "yt-dlp finished without producing an audio WAV file."
                         )
+
                     wav_file = candidates[0]
+
                 return str(wav_file)
+
         except Exception as exc:
             message = str(exc)
             lower_message = message.lower()
+
+            # Temporary diagnostics. These do not print cookie contents.
+            print(
+                "YOUTUBE DOWNLOAD FAILURE:",
+                repr(exc),
+                flush=True,
+            )
+            traceback.print_exc()
+
             if (
                 "sign in to confirm you're not a bot" in lower_message
                 or "use --cookies-from-browser" in lower_message
@@ -90,5 +117,18 @@ class YTDLDownloader(IAudioDownloader):
                         "If you cannot provide authorized cookies, upload the "
                         "audio file directly instead."
                     )
+
                 raise RuntimeError(guidance) from exc
-            raise RuntimeError(f"Could not download audio from YouTube: {message}") from exc
+
+            if "requested format is not available" in lower_message:
+                guidance = (
+                    "YouTube did not provide a downloadable audio format for this video. "
+                    "The video may be restricted, unavailable, or blocked by a regional "
+                    "or age restriction. Try another public video or upload an audio file "
+                    "instead."
+                )
+                raise RuntimeError(guidance) from exc
+
+            raise RuntimeError(
+                f"Could not download audio from YouTube: {message}"
+            ) from exc

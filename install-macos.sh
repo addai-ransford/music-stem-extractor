@@ -17,6 +17,12 @@ if ! command -v brew >/dev/null 2>&1; then
     exit 1
 fi
 
+if ! command -v deno >/dev/null 2>&1; then
+    echo "Installing Deno for yt-dlp's EJS challenge support..."
+    curl -fsSL https://deno.land/install.sh | DENO_INSTALL="$HOME/.deno" sh
+    export PATH="$HOME/.deno/bin:$PATH"
+fi
+
 if ! command -v ffmpeg >/dev/null 2>&1; then
     brew install ffmpeg
 fi
