@@ -120,6 +120,8 @@ YouTube can block automated downloads even when the URL is valid. This is impose
 
 The repository's `./deploy` script automates this setup. Put your authorized Netscape-format export at `./cookies.txt` (the file is git-ignored), then run `./deploy`. The script creates or updates the `youtube-cookies` Secret Manager secret, grants the Cloud Run runtime service account access, mounts the secret at `/secrets/youtube-cookies.txt`, sets `YOUTUBE_COOKIES_FILE`, and deploys the service. You need permission in the Google Cloud project to enable APIs, manage secrets and IAM, and deploy Cloud Run. To use a different local file, set `YOUTUBE_COOKIES_FILE` in your shell or `.env`. Do not put cookie contents in environment variables, build arguments, logs, or source control.
 
+Successfully downloaded YouTube audio is cached by video for up to 7 days, with a 1 GiB cache limit. The cache defaults to `DATA_DIR/youtube-cache`; set `YOUTUBE_AUDIO_CACHE_DIR` to override it. This is a local disk cache, so Cloud Run can reuse a download while an instance and its cache remain available, but cache entries are lost when Cloud Run recycles the instance.
+
 After the service has been configured once, refresh cookies without building or deploying a new revision:
 
 ```bash
