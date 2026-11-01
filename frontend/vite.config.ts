@@ -7,7 +7,15 @@ export default defineConfig({
     server: {
         host: true,
         port: 3000,
-        allowedHosts: true
+        allowedHosts: true,
+        proxy: {
+            '/process': 'http://localhost:8000',
+            '/stems': 'http://localhost:8000',
+            '/chords': 'http://localhost:8000',
+            '/audio': 'http://localhost:8000',
+            '/download': 'http://localhost:8000',
+            '/ws': { target: 'ws://localhost:8000', ws: true },
+        }
     },
     preview: {
         port: 3000,

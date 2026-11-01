@@ -1,8 +1,11 @@
 import os
 import shutil
 import uuid
+from pathlib import Path
 
+from spleeter.model.provider import ModelProvider
 from spleeter.separator import Separator
+from spleeter.utils.configuration import load_configuration
 from backend.mse.interface.extractor import IStemExtractor
 
 
@@ -18,6 +21,42 @@ class SpleeterStemExtractor(IStemExtractor):
         4: {"vocals.wav", "bass.wav", "drums.wav", "other.wav"},
         5: {"vocals.wav", "bass.wav", "drums.wav", "piano.wav", "other.wav"},
     }
+
+    @staticmethod
+    def _ensure_model_checkpoint(stems: int) -> None:
+        configuration = load_configuration(f"spleeter:{stems}stems")
+        model_name = configuration["model_dir"]
+        model_dir = Path(model_name)
+        if not model_dir.is_absolute():
+            model_dir = Path(ModelProvider.DEFAULT_MODEL_PATH) / model_dir
+
+        def has_checkpoint() -> bool:
+            return (
+                (model_dir / "checkpoint").is_file()
+                and (model_dir / "model.index").is_file()
+                and any(model_dir.glob("model.data-*"))
+            )
+
+        if has_checkpoint():
+            return
+
+        if model_dir.exists():
+            try:
+                # Spleeter's provider skips downloads when an empty cache
+                # directory already exists.
+                model_dir.rmdir()
+            except OSError as exc:
+                raise RuntimeError(
+                    f"The Spleeter {stems}-stem model cache is incomplete at "
+                    f"{model_dir}. Remove or restore that cache, then retry."
+                ) from exc
+
+        ModelProvider.default().get(model_name)
+        if not has_checkpoint():
+            raise RuntimeError(
+                f"The Spleeter {stems}-stem model checkpoint is missing from "
+                f"{model_dir} after download."
+            )
 
     def __init__(self, base_output: str = "./data/stems"):
         self.base_output = base_output
@@ -37,6 +76,7 @@ class SpleeterStemExtractor(IStemExtractor):
         os.makedirs(out_dir, exist_ok=False)
 
         try:
+            self._ensure_model_checkpoint(stems)
             separator = Separator(f"spleeter:{stems}stems")
             separator.separate_to_file(audio_path, out_dir, codec="wav")
 

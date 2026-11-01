@@ -1,0 +1,30 @@
+
+/* Studio-grade import surface, scoped to avoid changing legacy results UI */
+.ws-import-section{max-width:1050px;padding:48px 24px 80px}
+.ws-import-heading{padding-bottom:23px;margin-bottom:22px;border-bottom:1px solid #293445}
+.ws-import-heading h2{font-size:30px;letter-spacing:-.045em;font-weight:760}
+.ws-import-heading p{font-size:13px;color:#9ca9ba}
+.ws-import-section .upload-flow{background:linear-gradient(140deg,#192231,#131b27 65%);border:1px solid #354052;border-radius:18px;padding:28px;box-shadow:0 24px 80px #00000035}
+.ws-import-topline{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:24px}
+.ws-import-topline h3{font-size:19px;letter-spacing:-.025em;margin:8px 0}
+.ws-import-topline p{color:#99a6b7;margin:0;font-size:12px;line-height:1.6}
+.ws-source-tag{font-size:9px;letter-spacing:.09em;font-weight:700;color:#8fd3b0;border:1px solid #416354;padding:8px 10px;border-radius:6px;white-space:nowrap}
+.ws-import-section .mode-switch{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:5px;border:1px solid #344052;background:#0d1520;border-radius:12px;margin-bottom:24px}
+.ws-import-section .mode-tab{border:1px solid transparent;border-radius:8px;padding:14px 16px;background:transparent;color:#a2aebf;font-weight:700}
+.ws-import-section .mode-tab.is-active{background:#31294b;color:#e6dcff;border-color:#6d569f}
+.ws-import-section .upload-form{display:block}
+.ws-import-section .field-group>label{display:block;margin-bottom:11px;color:#dce4ef;font-weight:650;font-size:12px}
+.ws-import-section .text-input{background:#0c1420;border:1px solid #394659;border-radius:10px;color:#f1f4fa;padding:15px 16px;min-height:52px;width:100%;box-sizing:border-box}
+.ws-import-section .text-input:focus{outline:2px solid #8d72ed;outline-offset:1px}
+.ws-import-section .file-dropzone{min-height:185px;background:#101b29;border:1.5px dashed #53627a;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;text-align:center;padding:24px}
+.ws-import-section .file-dropzone:hover,.ws-import-section .file-dropzone.has-file{border-color:#a68eff;background:#1e2239}
+.ws-import-section .dropzone-icon{font-size:29px;color:#b6a3ff}
+.ws-import-section .dropzone-title{font-weight:700;color:#f1f3f9}
+.ws-import-section .dropzone-copy,.ws-import-section .field-help{font-size:11px;color:#8d9bac;line-height:1.65}
+.ws-import-section .form-bottom-row{display:flex;align-items:flex-end;gap:22px;justify-content:space-between;padding-top:25px;margin-top:20px;border-top:1px solid #2c3746}
+.ws-import-section .stem-select-group{flex:1;min-width:0}
+.ws-import-section .primary-button{min-height:52px;background:#8967f3;color:white;border:0;border-radius:10px;padding:0 24px;font-weight:750;white-space:nowrap;box-shadow:0 8px 25px #6843e533}
+.ws-import-section .primary-button:hover:not(:disabled){background:#9c7cff}
+.ws-import-section .primary-button:disabled{opacity:.5;cursor:not-allowed;box-shadow:none}
+.ws-import-section .job-panel{margin-top:28px}
+@media(max-width:680px){.ws-import-section{padding:28px 12px 48px}.ws-import-heading h2{font-size:24px}.ws-import-section .upload-flow{padding:18px}.ws-import-topline{display:block}.ws-source-tag{display:inline-block;margin-top:13px}.ws-import-section .form-bottom-row{display:block}.ws-import-section .primary-button{width:100%;margin-top:14px}.ws-import-section .mode-tab{padding:12px 8px;font-size:12px}}

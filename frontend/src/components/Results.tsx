@@ -1,8 +1,13 @@
 import React, { useEffect, useRef, useState } from "react";
 import ChordTimeline, { type ChordSegment } from "./ChordTimeline";
+import StudioMixer from "./StudioMixer";
+import KeyboardStudio from "./KeyboardStudio";
+
+export type SessionView = "Chords" | "Stem Studio" | "MIDI & Remix";
 
 interface ResultDisplayProps {
   jobId: string;
+  view: SessionView;
   onStatusChange?: (status: string) => void;
 }
 
@@ -69,8 +74,9 @@ function statusMessage(status: JobStatus): string {
   return STEPS.find((step) => step.id === status)?.description || "Your audio is being processed.";
 }
 
-export default function ResultDisplay({ jobId, onStatusChange }: ResultDisplayProps) {
+export default function ResultDisplay({ jobId, view, onStatusChange }: ResultDisplayProps) {
   const [status, setStatus] = useState<JobStatus>("queued");
+  const [extractionElapsed, setExtractionElapsed] = useState(0);
   const [stemFiles, setStemFiles] = useState<StemFile[]>([]);
   const [error, setError] = useState("");
   const [detectedKey, setDetectedKey] = useState<string | null>(null);
@@ -79,13 +85,31 @@ export default function ResultDisplay({ jobId, onStatusChange }: ResultDisplayPr
   const [chords, setChords] = useState<ChordSegment[]>([]);
   const [chordWarning, setChordWarning] = useState("");
   const [currentTime, setCurrentTime] = useState(0);
+  const [mixerSeekRequest, setMixerSeekRequest] = useState<{ time: number; token: number } | null>(null);
   const originalAudioRef = useRef<HTMLAudioElement | null>(null);
+  const [backingPlaying, setBackingPlaying] = useState(false);
+  const [transpose, setTranspose] = useState(0);
   const terminalStatusRef = useRef(false);
   const statusCallbackRef = useRef(onStatusChange);
 
   useEffect(() => {
     statusCallbackRef.current = onStatusChange;
   }, [onStatusChange]);
+
+  // Spleeter exposes stage changes, not exact frame-level progress. This is a
+  // conservative estimate that advances during extraction and yields to the
+  // actual server status when extraction completes.
+  useEffect(() => {
+    if (status !== "extracting") {
+      setExtractionElapsed(0);
+      return;
+    }
+    const startedAt = Date.now();
+    const updateElapsed = () => setExtractionElapsed(Math.floor((Date.now() - startedAt) / 1000));
+    updateElapsed();
+    const timer = setInterval(updateElapsed, 1000);
+    return () => clearInterval(timer);
+  }, [status]);
 
   useEffect(() => {
     let disposed = false;
@@ -249,11 +273,25 @@ export default function ResultDisplay({ jobId, onStatusChange }: ResultDisplayPr
     return () => controller.abort();
   }, [jobId, status]);
 
+  useEffect(() => {
+    if (view !== "Chords" && view !== "MIDI & Remix") originalAudioRef.current?.pause();
+  }, [view]);
+
+  const toggleBackingTrack = async () => {
+    const audio = originalAudioRef.current;
+    if (!audio) return;
+    if (!audio.paused) { audio.pause(); return; }
+    try { await audio.play(); }
+    catch { setError("Could not play the original audio. Please check the backend audio file."); }
+  };
+
   const seekToChord = (seconds: number) => {
-    if (!originalAudioRef.current) return;
-    originalAudioRef.current.currentTime = seconds;
     setCurrentTime(seconds);
-    void originalAudioRef.current.play().catch(() => undefined);
+    setMixerSeekRequest((previous) => ({ time: seconds, token: (previous?.token ?? 0) + 1 }));
+    if (originalAudioRef.current) {
+      originalAudioRef.current.currentTime = seconds;
+      void originalAudioRef.current.play().catch(() => undefined);
+    }
   };
 
   const downloadZip = () => {
@@ -261,6 +299,9 @@ export default function ResultDisplay({ jobId, onStatusChange }: ResultDisplayPr
   };
 
   const activeStepIndex = STEPS.findIndex((step) => step.id === status);
+  const extractionEstimate = Math.min(68, 45 + Math.floor(24 * (1 - Math.exp(-extractionElapsed / 90))));
+  const progressPercent = status === "queued" ? 0 : status === "downloading" ? 12 : status === "extracting" ? extractionEstimate : status === "key" ? 72 : status === "zipping" ? 90 : 0;
+  const activeStepNumber = activeStepIndex >= 0 ? activeStepIndex + 1 : 1;
   const finished = status === "done";
   const failed = status === "error";
 
@@ -276,23 +317,15 @@ export default function ResultDisplay({ jobId, onStatusChange }: ResultDisplayPr
         </div>
       ) : finished ? (
         <div className="job-success">
-          <div className="result-icon success-icon" aria-hidden="true">✓</div>
-          <p className="eyebrow">READY TO DOWNLOAD</p>
-          <h3 id="job-panel-title">Your stems are ready</h3>
-          {detectedKey && (
-            <div className="key-result">
-              <span>Detected musical key</span>
-              <strong>{detectedKey}</strong>
-            </div>
-          )}
-          <div className="track-session-heading">
-            <div><p className="eyebrow">YOUR SESSION</p><p className="results-copy">Your track has been separated. Preview each layer below, then download the stems you want.</p></div>
-            <span className="session-ready"><span aria-hidden="true">●</span> Ready</span>
-          </div>
-          <section className="original-player-panel" aria-label="Original full song player">
-            <div className="chord-panel-heading">
-              <div><p className="eyebrow">ORIGINAL MIX</p><h4>Listen & follow chords</h4></div>
-              <span className="chord-live-label">{chords.find((item) => currentTime >= item.start && currentTime < item.end)?.chord || "—"}</span>
+          <div className="session-view-heading"><div><p className="eyebrow">{view === "Chords" ? "LEARN & PRACTICE" : view === "Stem Studio" ? "MULTITRACK AUDIO" : "CREATE YOUR OWN PARTS"}</p><h3 id="job-panel-title">{view === "Chords" ? "Follow the chords" : view === "Stem Studio" ? "Separate & mix your tracks" : "Record a MIDI performance"}</h3><p>{view === "Chords" ? "Listen, follow the progression, jump to a chord, and transpose the harmony." : view === "Stem Studio" ? "Play the separated instruments together, mute or solo any part, and download WAV stems." : "Use your computer keyboard, on-screen piano, or a MIDI controller to record a new part."}</p></div></div>
+          <div className="session-view-panel" hidden={view !== "Chords"}>
+          <section className="daw-session" aria-label="Song session workspace">
+            <div className="daw-session-toolbar">
+              <div className="daw-session-title">
+                <span className="daw-live-dot" aria-hidden="true" />
+                <div><p className="eyebrow">SESSION VIEW</p><h4>Arrangement & analysis</h4></div>
+              </div>
+              <div className="daw-session-meta"><span>STEMS <strong>{stemFiles.length}</strong></span><span>KEY <strong>{detectedKey || "—"}</strong></span><div className="daw-transpose-control" aria-label="Transpose chords"><button type="button" onClick={() => setTranspose(value => Math.max(-11, value - 1))} disabled={transpose <= -11} aria-label="Transpose down one semitone">−</button><span>TRANSPOSE <strong>{transpose === 0 ? "0" : `${transpose > 0 ? "+" : ""}${transpose}`}</strong></span><button type="button" onClick={() => setTranspose(value => Math.min(11, value + 1))} disabled={transpose >= 11} aria-label="Transpose up one semitone">+</button>{transpose !== 0 && <button type="button" className="daw-transpose-reset" onClick={() => setTranspose(0)}>Reset</button>}</div></div>
             </div>
             <audio
               ref={originalAudioRef}
@@ -302,75 +335,54 @@ export default function ResultDisplay({ jobId, onStatusChange }: ResultDisplayPr
               src={`${API_BASE_URL}/audio/${encodeURIComponent(jobId)}`}
               onTimeUpdate={(event) => setCurrentTime(event.currentTarget.currentTime)}
               onSeeked={(event) => setCurrentTime(event.currentTarget.currentTime)}
+              onPlay={() => setBackingPlaying(true)}
+              onPause={() => setBackingPlaying(false)}
+              onEnded={() => setBackingPlaying(false)}
             >
               Your browser does not support audio playback.
             </audio>
             {chordWarning && <p className="chord-disclaimer" role="status">{chordWarning}</p>}
-            <ChordTimeline chords={chords} currentTime={currentTime} onSeek={seekToChord} originalKey={detectedKey} />
+            <ChordTimeline chords={chords} currentTime={currentTime} onSeek={seekToChord} originalKey={detectedKey} transpose={transpose} />
           </section>
-          <div className="stem-mixer" aria-busy={filesLoading}>
-            <div className="mixer-header"><span>TRACK</span><span>PREVIEW & EXPORT</span></div>
-            {filesLoading && <p className="muted-message" role="status">Loading your WAV files…</p>}
-            {!filesLoading && stemFiles.length === 0 && (
-              <p className="muted-message" role="status">{error || "No individual stem files were returned. You can try the full ZIP archive."}</p>
-            )}
-            {stemFiles.map((stem, index) => {
-              const downloadUrl = getStemDownloadUrl(stem.url);
-              const stemName = stem.name.replace(/\.wav$/i, "").replace(/[_-]/g, " ");
-              const trackStyle = ["vocal", "drums", "bass", "other", "piano"][index % 5];
-              return (
-                <article className={`mixer-track track-${trackStyle}`} key={stem.name}>
-                  <div className="mixer-track-identity">
-                    <span className="track-color-mark" aria-hidden="true"><span /></span>
-                    <div className="stem-file-info"><strong>{stemName}</strong><small>WAV · Individual stem</small></div>
-                  </div>
-                  <div className="mixer-track-actions">
-                    {downloadUrl ? (
-                      <>
-                        <audio className="stem-audio" controls preload="none" src={downloadUrl} aria-label={`Preview ${stemName}`}>
-                          Your browser does not support audio playback.
-                        </audio>
-                        <a className="stem-download-action" href={downloadUrl} download={stem.name} aria-label={`Download ${stem.name}`} title="Download stem">↓</a>
-                      </>
-                    ) : <span className="stem-download-action" aria-label="Download unavailable">Unavailable</span>}
-                  </div>
-                </article>
-              );
-            })}
           </div>
+          <div className="session-view-panel" hidden={view !== "Stem Studio"}>
+          {filesLoading && <p className="muted-message" role="status">Loading your WAV stems…</p>}
+          {!filesLoading && !stemFiles.some((stem) => getStemDownloadUrl(stem.url)) && <p className="muted-message" role="status">{error || "No individual stem files were returned. You can still try the full ZIP archive."}</p>}
+          {!filesLoading && stemFiles.some((stem) => getStemDownloadUrl(stem.url)) && (
+            <>
+              <StudioMixer active={view === "Stem Studio"} stems={stemFiles.flatMap((stem) => {
+                const url = getStemDownloadUrl(stem.url);
+                return url ? [{ name: stem.name, url, downloadUrl: url }] : [];
+              })} seekRequest={mixerSeekRequest} onTimeChange={setCurrentTime} />
+
+            </>
+          )}
           <button className="secondary-button download-all-button" type="button" onClick={downloadZip}>
             <span aria-hidden="true">⇩</span> Download all stems (.ZIP)
           </button>
+          </div>
+          <div className="session-view-panel" hidden={view !== "MIDI & Remix"}>
+            <div className="remix-guide"><div><strong>Record a performance with your song</strong><p>Start the original backing track, then record your keyboard performance against its timeline.</p></div><button className="studio-play-button" type="button" onClick={() => void toggleBackingTrack()}>{backingPlaying ? "Ⅱ Pause backing" : "▶ Play backing"}</button></div>{error && <p role="alert" className="music-error">{error}</p>}
+            <KeyboardStudio currentTime={currentTime} active={view === "MIDI & Remix"} />
+            <div className="remix-export-note"><strong>Audio mixdown is not available yet.</strong><p>The existing MIDI recorder exports MIDI note data, not audio. Exporting a finished WAV/MP3 with the stems and your new instrument requires an audio-rendering and mixdown feature.</p></div>
+          </div>
         </div>
       ) : (
         <div className="job-progress">
           <div className="progress-heading">
             <div>
               <p className="eyebrow">IN PROGRESS</p>
-              <h3 id="job-panel-title">{status === "queued" ? "Your track is in the queue" : STEPS.find((step) => step.id === status)?.title || "Working on your track"}</h3>
+              <h3 id="job-panel-title">{status === "queued" ? "Preparing your track" : STEPS.find((step) => step.id === status)?.title || "Working on your track"}</h3>
+              <p className="progress-description">{status === "queued" ? "Waiting to begin processing…" : `Step ${activeStepNumber} of ${STEPS.length} · ${STEPS.find((step) => step.id === status)?.description || "Processing your audio"}`}</p>
             </div>
-            <span className="progress-pulse" aria-hidden="true"><span /></span>
+            <strong className="progress-percentage">{progressPercent}%</strong>
           </div>
-          <p className="progress-description">{socketState === "reconnecting" ? "Reconnecting to live updates. Processing may continue in the background." : statusMessage(status)}</p>
-          <ol className="progress-steps">
-            {STEPS.map((step, index) => {
-              const complete = activeStepIndex >= 0 && index < activeStepIndex;
-              const active = step.id === status;
-              return (
-                <li className={complete ? "progress-step is-complete" : active ? "progress-step is-active" : "progress-step"} key={step.id}>
-                  <span className="step-marker" aria-hidden="true">{complete ? "✓" : index + 1}</span>
-                  <span className="step-content">
-                    <strong>{step.title}</strong>
-                    <small>{step.description}</small>
-                  </span>
-                  {active && <span className="step-state">Current</span>}
-                </li>
-              );
-            })}
-          </ol>
-          <p className="connection-note" role="status">
-            <span className={socketState === "connected" ? "connection-dot is-connected" : "connection-dot"} aria-hidden="true" />
-            {socketState === "connected" ? "Live status connected" : socketState === "reconnecting" ? "Restoring live updates…" : "Connecting to live updates…"}
+          <div className="progress-track" role="progressbar" aria-label="Estimated audio processing progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progressPercent}>
+            <div className="progress-track-fill" style={{ width: `${progressPercent}%` }} />
+          </div>
+          <p className="progress-live-note" role="status">
+            <span className="progress-pulse" aria-hidden="true"><span /></span>
+            {socketState === "reconnecting" ? "Reconnecting to live updates…" : status === "extracting" ? "Separating your audio layers…" : "Working on your track…"}
           </p>
         </div>
       )}

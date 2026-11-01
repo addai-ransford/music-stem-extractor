@@ -1,0 +1,16 @@
+
+/* One unified Chordify-inspired header and modal import workflow */
+.ws-header{display:grid;grid-template-columns:auto minmax(220px,1fr) auto;gap:22px;background:#0f777b;border-bottom:1px solid #138e92;padding:10px 22px;min-height:68px;height:auto}
+.ws-logo>span{background:#ffffff24}.ws-logo small{color:#c2eeee}.ws-song-search{display:flex;align-items:center;max-width:680px;width:100%;margin:auto;background:#f7fafc;border-radius:10px;overflow:hidden;height:47px}
+.ws-song-search input{flex:1;min-width:0;border:0;outline:0;background:transparent;padding:0 17px;color:#19212b;font-size:16px}
+.ws-song-search input::placeholder{color:#8a919a}.ws-song-search button{border:0;background:transparent;color:#2c3842;font-size:31px;width:52px;height:100%}
+.ws-header-actions .ws-import{border:0;background:#075e64;padding:14px 20px;font-size:14px!important}
+.ws-header-actions .ws-import:hover{background:#064b52}.ws-tabs{grid-column:1/-1;justify-content:center;border-top:1px solid #ffffff20;padding-top:7px}.ws-tabs button{color:#e0f6f5}.ws-tabs button.selected{background:#ffffff26;color:white}
+.ws-sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
+.ws-import-overlay{position:fixed;inset:0;z-index:1000;background:#02070bc9;display:flex;align-items:center;justify-content:center;padding:18px;overflow-y:auto;backdrop-filter:blur(8px)}
+.ws-import-dialog{width:min(780px,100%);max-height:calc(100vh - 36px);overflow-y:auto;background:#131b26;border:1px solid #405066;border-radius:18px;box-shadow:0 30px 120px #0009}
+.ws-dialog-header{display:flex;justify-content:space-between;align-items:center;padding:24px 28px 0}.ws-dialog-header h2{font-size:25px;margin:6px 0}.ws-dialog-header button{background:#283344;border:0;border-radius:8px;color:white;font-size:27px;width:38px;height:38px}
+.ws-import-dialog .ws-import-section{padding:16px 24px 28px;max-width:none}.ws-import-dialog .upload-flow{box-shadow:none}
+.ws-session-output{max-width:1150px;margin:0 auto;padding:28px 20px 60px}.ws-output-header{display:flex;align-items:center;gap:20px;margin-bottom:14px}.ws-output-header p,.ws-output-empty{color:#91a0b2;font-size:12px}.ws-output-empty{padding:24px;border:1px dashed #3b4b5e;border-radius:12px;text-align:center}
+@media(max-width:800px){.ws-header{grid-template-columns:1fr auto;gap:10px}.ws-song-search{grid-column:1/-1;grid-row:2;max-width:none}.ws-tabs{grid-row:3}.ws-header-actions{justify-self:end}}
+@media(max-width:520px){.ws-header{padding:10px}.ws-logo small{display:none}.ws-header-actions .ws-import{padding:12px;font-size:12px!important}.ws-song-search input{font-size:13px}.ws-dialog-header{padding:18px 18px 0}.ws-import-dialog .ws-import-section{padding:12px}}

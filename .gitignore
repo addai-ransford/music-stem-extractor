@@ -1,2 +1,6 @@
 .env
 .idea
+
+# YouTube authentication cookies are secrets; never commit them.
+cookies.txt
+youtube-cookies.txt

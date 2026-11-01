@@ -1,8 +1,10 @@
-import React, { useCallback, useEffect, useState } from "react";
-import ResultDisplay from "./Results";
+import React, { useEffect, useRef, useState } from "react";
+
 
 interface UploadFormProps {
   onError: (msg: string) => void;
+  initialUrl?: string;
+  onJobStarted: (jobId: string) => void;
 }
 
 type InputMode = "upload" | "link";
@@ -35,14 +37,13 @@ function isSupportedYouTubeUrl(value: string): boolean {
   }
 }
 
-export default function UploadForm({ onError }: UploadFormProps) {
-  const [mode, setMode] = useState<InputMode>("link");
+export default function UploadForm({ onError, initialUrl = "", onJobStarted }: UploadFormProps) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [mode, setMode] = useState<InputMode>(initialUrl.trim() ? "link" : "upload");
   const [file, setFile] = useState<File | null>(null);
-  const [url, setUrl] = useState("");
+  const [url, setUrl] = useState(initialUrl);
   const [stems, setStems] = useState(4);
   const [loading, setLoading] = useState(false);
-  const [jobId, setJobId] = useState<string | null>(null);
-  const [status, setStatus] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   useEffect(() => {
@@ -55,12 +56,7 @@ export default function UploadForm({ onError }: UploadFormProps) {
     return () => URL.revokeObjectURL(objectUrl);
   }, [file, mode]);
 
-  const handleStatusChange = useCallback((nextStatus: string) => {
-    setStatus(nextStatus);
-  }, []);
-
-  const processing = Boolean(jobId && status !== "done" && status !== "error");
-  const formDisabled = loading || processing;
+  const formDisabled = loading;
   const fileInvalid = Boolean(file && (!ACCEPTED_EXTENSIONS.test(file.name) || file.size > MAX_FILE_SIZE));
   const inputInvalid = mode === "upload" ? !file || fileInvalid : !url.trim() || !isSupportedYouTubeUrl(url.trim());
   const canSubmit = !formDisabled && !inputInvalid;
@@ -92,8 +88,6 @@ export default function UploadForm({ onError }: UploadFormProps) {
     }
 
     setLoading(true);
-    setJobId(null);
-    setStatus(null);
 
     try {
       const form = new FormData();
@@ -112,8 +106,7 @@ export default function UploadForm({ onError }: UploadFormProps) {
         throw new Error("The server returned an unexpected response. Please try again.");
       }
 
-      setJobId((payload as { job_id: string }).job_id);
-      setStatus("queued");
+      onJobStarted((payload as { job_id: string }).job_id);
     } catch (error) {
       const message = error instanceof Error && error.message === "Failed to fetch"
         ? "Can't reach the processing server. Check that the backend is running, then try again."
@@ -125,7 +118,8 @@ export default function UploadForm({ onError }: UploadFormProps) {
   }
 
   return (
-    <div className="upload-flow" aria-busy={loading || processing}>
+    <div className="upload-flow new-song-form" aria-busy={loading}>
+      
       <div className="mode-switch" role="tablist" aria-label="Choose audio source">
         <button
           type="button"
@@ -135,9 +129,9 @@ export default function UploadForm({ onError }: UploadFormProps) {
           aria-controls="source-panel"
           className={mode === "upload" ? "mode-tab is-active" : "mode-tab"}
           disabled={formDisabled}
-          onClick={() => changeMode("upload")}
+          onClick={() => { changeMode("upload"); fileInputRef.current?.click(); }}
         >
-          <span aria-hidden="true">↑</span> Upload a file
+          <span aria-hidden="true">↑</span> Upload audio
         </button>
         <button
           type="button"
@@ -149,22 +143,16 @@ export default function UploadForm({ onError }: UploadFormProps) {
           disabled={formDisabled}
           onClick={() => changeMode("link")}
         >
-          <span aria-hidden="true">↗</span> YouTube link
+          <span aria-hidden="true">↗</span> YouTube URL
         </button>
       </div>
 
       <form onSubmit={handleSubmit} className="upload-form" noValidate>
-        <div id="source-panel" role="tabpanel" aria-labelledby={mode === "upload" ? "upload-tab" : "link-tab"}>
-          {mode === "upload" ? (
-            <label className={file ? "file-dropzone has-file" : "file-dropzone"} htmlFor="audio-file">
-              <span className="dropzone-icon" aria-hidden="true">⇧</span>
-              <span className="dropzone-title">{file ? file.name : "Choose an audio or video file"}</span>
-              <span className="dropzone-copy">
-                {file ? `${(file.size / (1024 * 1024)).toFixed(1)} MB · Click to change file` : "MP3, WAV, FLAC, M4A, AAC, OGG, MP4, MOV, MKV or WEBM"}
-              </span>
               <input
+                ref={fileInputRef}
                 id="audio-file"
                 type="file"
+                className="new-song-file-input"
                 accept=".mp3,.wav,.flac,.m4a,.aac,.ogg,.opus,.mp4,.mov,.mkv,.avi,.webm,audio/*,video/*"
                 onChange={(event) => {
                   setFile(event.target.files?.[0] || null);
@@ -173,10 +161,19 @@ export default function UploadForm({ onError }: UploadFormProps) {
                 disabled={formDisabled}
                 aria-describedby="file-help"
               />
+        <div id="source-panel" role="tabpanel" aria-labelledby={mode === "upload" ? "upload-tab" : "link-tab"}>
+          {mode === "upload" ? (
+            <label className={file ? "file-dropzone has-file" : "file-dropzone"} htmlFor="audio-file">
+              <span className="dropzone-icon" aria-hidden="true">⇧</span>
+              <span className="dropzone-title">{file ? file.name : "Tap to choose a song"}</span>
+              <span className="dropzone-copy">
+                {file ? `${(file.size / (1024 * 1024)).toFixed(1)} MB · Tap to change file` : "MP3, WAV, FLAC, M4A and supported audio/video files"}
+              </span>
+
             </label>
           ) : (
             <div className="field-group">
-              <label htmlFor="youtube-url">YouTube URL</label>
+              <label htmlFor="youtube-url">Video link</label>
               <input
                 id="youtube-url"
                 className="text-input"
@@ -201,7 +198,7 @@ export default function UploadForm({ onError }: UploadFormProps) {
               <audio className="original-audio-player" controls preload="metadata" src={previewUrl}>
                 Your browser does not support audio playback.
               </audio>
-              <p className="field-help">Preview the original file before processing. Chords will be shown on the results screen.</p>
+              
             </div>
           )}
           <p id="file-help" className="field-help">
@@ -214,29 +211,19 @@ export default function UploadForm({ onError }: UploadFormProps) {
           )}
         </div>
 
-        <div className="form-bottom-row">
-          <div className="field-group stem-select-group">
-            <label htmlFor="stem-count">Separation quality</label>
-            <select
-              id="stem-count"
-              className="text-input stem-select"
-              value={stems}
-              onChange={(event) => setStems(Number(event.target.value))}
-              disabled={formDisabled}
-            >
-              <option value={2}>2 stems · Vocals + accompaniment</option>
-              <option value={4}>4 stems · Vocals, bass, drums, other</option>
-              <option value={5}>5 stems · Includes piano</option>
-            </select>
-          </div>
-          <button className="primary-button" type="submit" disabled={!canSubmit}>
-            {loading ? <><span className="button-spinner" aria-hidden="true" /> Starting…</> : processing ? "Processing…" : "Separate stems"}
-            {!loading && !processing && <span aria-hidden="true">→</span>}
-          </button>
+        <div className="new-song-compact-settings">
+          <label htmlFor="stem-count">Separation quality</label>
+          <select id="stem-count" className="text-input" value={stems} onChange={event => setStems(Number(event.target.value))} disabled={formDisabled}>
+            <option value={2}>2 stems · Vocals + instrumental</option>
+            <option value={4}>4 stems · Vocals, bass, drums + other</option>
+            <option value={5}>5 stems · Adds piano</option>
+          </select>
         </div>
+        <button className="primary-button new-song-create" type="submit" disabled={!canSubmit}>
+          {loading ? <><span className="button-spinner" aria-hidden="true" /> Starting…</> : <>Create session <span aria-hidden="true">→</span></>}
+        </button>
       </form>
 
-      {jobId && <ResultDisplay jobId={jobId} onStatusChange={handleStatusChange} />}
     </div>
   );
 }
