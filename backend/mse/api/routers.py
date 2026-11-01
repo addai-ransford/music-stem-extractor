@@ -63,6 +63,7 @@ def notify(job_id: str, message: dict):
 
 # ---------------- Process stems ----------------
 def process_stems(job_id: str, stems: int, youtube_url: str = None, file_path: str = None):
+    audio_file = None
     try:
         jobs[job_id]["status"] = "downloading"
         notify(job_id, {"status": "Downloading / saving file..."})
@@ -148,8 +149,13 @@ def process_stems(job_id: str, stems: int, youtube_url: str = None, file_path: s
 
     except Exception as e:
         jobs[job_id]["status"] = "error"
-        jobs[job_id]["error"] = str(e)
-        notify(job_id, {"status": "error", "error": str(e)})
+        error_message = (
+            "We couldn't process this YouTube link. Try uploading an audio file to continue."
+            if youtube_url
+            else str(e)
+        )
+        jobs[job_id]["error"] = error_message
+        notify(job_id, {"status": "error", "error": error_message})
     finally:
         # Uploaded source files are temporary; never leave user uploads behind.
         if file_path and os.path.isfile(file_path):
@@ -157,6 +163,11 @@ def process_stems(job_id: str, stems: int, youtube_url: str = None, file_path: s
                 os.remove(file_path)
             except OSError:
                 pass
+        if youtube_url and audio_file:
+            try:
+                yt_service.cleanup(audio_file)
+            except OSError as cleanup_error:
+                print(f"Could not remove temporary YouTube audio: {cleanup_error}", flush=True)
 
 
 # ---------------- Analyze PDF ----------------

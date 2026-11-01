@@ -739,6 +739,7 @@ input:disabled {
   font-variant-numeric: tabular-nums;
 }
 .progress-track {
+  position: relative;
   width: 100%;
   height: 8px;
   margin: 18px 0 12px;
@@ -747,10 +748,20 @@ input:disabled {
   background: rgba(255,255,255,.12);
 }
 .progress-track-fill {
+  position: relative;
   height: 100%;
   border-radius: inherit;
   background: var(--accent, #a78bfa);
   transition: width .45s ease;
+}
+.progress-track.is-indeterminate .progress-track-fill {
+  position: absolute;
+  width: 32%;
+  animation: progress-indeterminate 1.5s ease-in-out infinite alternate;
+}
+@keyframes progress-indeterminate {
+  from { left: 0; }
+  to { left: 68%; }
 }
 .progress-live-note {
   display: flex;
@@ -790,6 +801,7 @@ input:disabled {
 @media (prefers-reduced-motion: reduce) {
   .progress-pulse > span { animation: none; }
   .progress-track-fill { transition: none; }
+  .progress-track.is-indeterminate .progress-track-fill { animation: none; left: 34%; }
 }
 
 

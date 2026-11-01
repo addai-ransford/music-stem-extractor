@@ -95,7 +95,7 @@ The deploy step currently creates a public service named `stem-lab`. Do not use 
 ### Production limitations to address before scaling
 
 - **Job state is in memory.** A restart loses active job status/results; keep the service at one instance until jobs and status are moved to shared storage/queue.
-- **Cloud Run disk is ephemeral.** Processed stems and uploads are not durable across restarts. Use a Cloud Storage bucket and lifecycle rules for persistent output before treating this as a durable production service.
+- **No Cloud Storage is used for audio.** Cloud Run keeps the active job's stems temporarily under `/tmp/data`; uploads and YouTube downloads are also temporary. Results are only available from the running instance and disappear when it restarts. This avoids retaining user audio in a cloud storage bucket.
 - **Resource use:** TensorFlow/Spleeter can exceed 4 GiB for some workloads. If a job runs out of memory, increase Cloud Run memory and review model/runtime usage.
 - The `/healthz` endpoint returns JSON for deployment health checks. It confirms the API process is responding, not that an audio model has completed a real inference.
 
@@ -120,7 +120,7 @@ YouTube can block automated downloads even when the URL is valid. This is impose
 
 The repository's `./deploy` script automates this setup. Put your authorized Netscape-format export at `./cookies.txt` (the file is git-ignored), then run `./deploy`. The script creates or updates the `youtube-cookies` Secret Manager secret, grants the Cloud Run runtime service account access, mounts the secret at `/secrets/youtube-cookies.txt`, sets `YOUTUBE_COOKIES_FILE`, and deploys the service. You need permission in the Google Cloud project to enable APIs, manage secrets and IAM, and deploy Cloud Run. To use a different local file, set `YOUTUBE_COOKIES_FILE` in your shell or `.env`. Do not put cookie contents in environment variables, build arguments, logs, or source control.
 
-Successfully downloaded YouTube audio is cached by video for up to 7 days, with a 1 GiB cache limit. The cache defaults to `DATA_DIR/youtube-cache`; set `YOUTUBE_AUDIO_CACHE_DIR` to override it. This is a local disk cache, so Cloud Run can reuse a download while an instance and its cache remain available, but cache entries are lost when Cloud Run recycles the instance.
+YouTube audio is not cached. Each download is stored in a temporary directory only while its job is processing, then removed. Stems and playback files remain temporarily under `/tmp/data` so they can be downloaded from the active instance; they are not uploaded to Cloud Storage and are lost when Cloud Run recycles the instance.
 
 After the service has been configured once, refresh cookies without building or deploying a new revision:
 
@@ -130,4 +130,4 @@ After the service has been configured once, refresh cookies without building or 
 
 This uploads a new version to the existing Secret Manager secret and ensures the Cloud Run runtime account can access it. The deployed service must already mount the secret as `latest`; no Cloud Run deployment is performed.
 
-Cookies do not guarantee access: expired sessions, bot checks, age/region restrictions, or video permissions can still block a download. The app now returns more actionable guidance for this case. The most reliable fallback is to upload an audio file that you have permission to use. Only download or process content you are authorized to access.
+Cookies do not guarantee access: expired sessions, bot checks, age/region restrictions, or video permissions can still block a download. When YouTube processing fails, the app displays a simple prompt to upload an audio file instead; detailed download errors are not shown in the frontend. Only download or process content you are authorized to access.

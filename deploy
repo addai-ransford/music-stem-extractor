@@ -96,7 +96,7 @@ DEPLOY_ARGS=(
   --min 0
   --cpu-boost
   --no-cpu-throttling
-  --update-env-vars "PYTHONUNBUFFERED=1"
+  --update-env-vars "PYTHONUNBUFFERED=1,DATA_DIR=/tmp/data"
 )
 
 # If a local cookie file exists, securely upload it to Secret Manager and mount
