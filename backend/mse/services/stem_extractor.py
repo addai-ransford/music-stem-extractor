@@ -58,8 +58,11 @@ class SpleeterStemExtractor(IStemExtractor):
                 f"{model_dir} after download."
             )
 
-    def __init__(self, base_output: str = "./data/stems"):
-        self.base_output = base_output
+    def __init__(self, base_output: str | None = None):
+        data_dir = os.environ.get("DATA_DIR", "./data")
+        self.base_output = (
+            base_output if base_output is not None else os.path.join(data_dir, "stems")
+        )
         os.makedirs(self.base_output, exist_ok=True)
 
     def extract(self, audio_path: str, stems: int) -> str:

@@ -76,7 +76,6 @@ function statusMessage(status: JobStatus): string {
 
 export default function ResultDisplay({ jobId, view, onStatusChange }: ResultDisplayProps) {
   const [status, setStatus] = useState<JobStatus>("queued");
-  const [extractionElapsed, setExtractionElapsed] = useState(0);
   const [stemFiles, setStemFiles] = useState<StemFile[]>([]);
   const [error, setError] = useState("");
   const [detectedKey, setDetectedKey] = useState<string | null>(null);
@@ -95,21 +94,6 @@ export default function ResultDisplay({ jobId, view, onStatusChange }: ResultDis
   useEffect(() => {
     statusCallbackRef.current = onStatusChange;
   }, [onStatusChange]);
-
-  // Spleeter exposes stage changes, not exact frame-level progress. This is a
-  // conservative estimate that advances during extraction and yields to the
-  // actual server status when extraction completes.
-  useEffect(() => {
-    if (status !== "extracting") {
-      setExtractionElapsed(0);
-      return;
-    }
-    const startedAt = Date.now();
-    const updateElapsed = () => setExtractionElapsed(Math.floor((Date.now() - startedAt) / 1000));
-    updateElapsed();
-    const timer = setInterval(updateElapsed, 1000);
-    return () => clearInterval(timer);
-  }, [status]);
 
   useEffect(() => {
     let disposed = false;
@@ -299,8 +283,7 @@ export default function ResultDisplay({ jobId, view, onStatusChange }: ResultDis
   };
 
   const activeStepIndex = STEPS.findIndex((step) => step.id === status);
-  const extractionEstimate = Math.min(68, 45 + Math.floor(24 * (1 - Math.exp(-extractionElapsed / 90))));
-  const progressPercent = status === "queued" ? 0 : status === "downloading" ? 12 : status === "extracting" ? extractionEstimate : status === "key" ? 72 : status === "zipping" ? 90 : 0;
+  const progressPercent = status === "queued" ? 0 : status === "downloading" ? 12 : status === "extracting" ? null : status === "key" ? 72 : status === "zipping" ? 90 : 0;
   const activeStepNumber = activeStepIndex >= 0 ? activeStepIndex + 1 : 1;
   const finished = status === "done";
   const failed = status === "error";
@@ -375,14 +358,27 @@ export default function ResultDisplay({ jobId, view, onStatusChange }: ResultDis
               <h3 id="job-panel-title">{status === "queued" ? "Preparing your track" : STEPS.find((step) => step.id === status)?.title || "Working on your track"}</h3>
               <p className="progress-description">{status === "queued" ? "Waiting to begin processing…" : `Step ${activeStepNumber} of ${STEPS.length} · ${STEPS.find((step) => step.id === status)?.description || "Processing your audio"}`}</p>
             </div>
-            <strong className="progress-percentage">{progressPercent}%</strong>
+            <strong
+              className={`progress-percentage${progressPercent === null ? " progress-indeterminate-symbol" : ""}`}
+              aria-label={progressPercent === null ? "Separating stems" : undefined}
+            >
+              {progressPercent === null ? "⟳" : `${progressPercent}%`}
+            </strong>
           </div>
-          <div className="progress-track" role="progressbar" aria-label="Estimated audio processing progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progressPercent}>
-            <div className="progress-track-fill" style={{ width: `${progressPercent}%` }} />
+          <div
+            className={`progress-track${progressPercent === null ? " is-indeterminate" : ""}`}
+            role="progressbar"
+            aria-label="Audio processing progress"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={progressPercent ?? undefined}
+            aria-valuetext={progressPercent === null ? "Separating stems; exact progress is unavailable" : undefined}
+          >
+            <div className="progress-track-fill" style={progressPercent === null ? undefined : { width: `${progressPercent}%` }} />
           </div>
           <p className="progress-live-note" role="status">
             <span className="progress-pulse" aria-hidden="true"><span /></span>
-            {socketState === "reconnecting" ? "Reconnecting to live updates…" : status === "extracting" ? "Separating your audio layers…" : "Working on your track…"}
+            {socketState === "reconnecting" ? "Reconnecting to live updates…" : status === "extracting" ? "Separating stems. This step can take several minutes." : "Working on your track…"}
           </p>
         </div>
       )}
