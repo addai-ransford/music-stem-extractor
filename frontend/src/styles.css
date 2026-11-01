@@ -738,6 +738,13 @@ input:disabled {
   line-height: 1;
   font-variant-numeric: tabular-nums;
 }
+.progress-indeterminate-symbol {
+  display: inline-block;
+  animation: progress-symbol-spin 1.5s linear infinite;
+}
+@keyframes progress-symbol-spin {
+  to { transform: rotate(360deg); }
+}
 .progress-track {
   position: relative;
   width: 100%;
@@ -800,6 +807,7 @@ input:disabled {
 }
 @media (prefers-reduced-motion: reduce) {
   .progress-pulse > span { animation: none; }
+  .progress-indeterminate-symbol { animation: none; }
   .progress-track-fill { transition: none; }
   .progress-track.is-indeterminate .progress-track-fill { animation: none; left: 34%; }
 }

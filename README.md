@@ -109,25 +109,10 @@ curl -fsS http://localhost:8080/healthz
 ```
 
 
-### YouTube "Sign in to confirm you're not a bot" errors
+### YouTube downloads
 
-YouTube can block automated downloads even when the URL is valid. This is imposed by YouTube and cannot be reliably fixed by retrying or changing the URL. The downloader supports an **optional** operator-provided cookies file:
-
-1. Export cookies for a YouTube session you are authorized to use in Netscape cookies.txt format. Keep the file private and do not commit it to Git.
-2. Store the file as a secret in your hosting platform's secret manager and mount it into the service at a path such as `/secrets/youtube-cookies.txt`.
-3. Set the environment variable `YOUTUBE_COOKIES_FILE=/secrets/youtube-cookies.txt` on the service.
-4. Ensure the runtime service account can access the secret, and periodically refresh the cookies if YouTube expires the session.
-
-The repository's `./deploy` script automates this setup. Put your authorized Netscape-format export at `./cookies.txt` (the file is git-ignored), then run `./deploy`. On first setup, the script creates the `youtube-cookies` Secret Manager secret from that file, grants the Cloud Run runtime service account access, mounts the secret at `/secrets/youtube-cookies.txt`, sets `YOUTUBE_COOKIES_FILE`, and deploys the service. Subsequent code deployments reuse the existing secret without uploading a new cookie version. To rotate cookies explicitly, run `./deploy --cookies-only`. You need permission in the Google Cloud project to enable APIs, manage secrets and IAM, and deploy Cloud Run. To use a different local file, set `YOUTUBE_COOKIES_FILE` in your shell or `.env`. Do not put cookie contents in environment variables, build arguments, logs, or source control.
+The downloader does not require or use cookies. YouTube may still block automated downloads for some videos; if a link cannot be processed, upload an audio file instead.
 
 YouTube audio is not cached. Each download is stored in a temporary directory only while its job is processing, then removed. Stems and playback files remain temporarily under `/tmp/data` so they can be downloaded from the active instance; they are not uploaded to Cloud Storage and are lost when Cloud Run recycles the instance.
 
-After the service has been configured once, refresh cookies without building or deploying a new revision:
-
-```bash
-./deploy --cookies-only
-```
-
-This uploads a new version to the existing Secret Manager secret and ensures the Cloud Run runtime account can access it. The deployed service must already mount the secret as `latest`; no Cloud Run deployment is performed.
-
-Cookies do not guarantee access: expired sessions, bot checks, age/region restrictions, or video permissions can still block a download. When YouTube processing fails, the app displays a simple prompt to upload an audio file instead; detailed download errors are not shown in the frontend. Only download or process content you are authorized to access.
+When YouTube processing fails, the app displays a simple prompt to upload an audio file instead; detailed download errors are not shown in the frontend. Only download or process content you are authorized to access.

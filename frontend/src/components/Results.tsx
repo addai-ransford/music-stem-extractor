@@ -358,7 +358,12 @@ export default function ResultDisplay({ jobId, view, onStatusChange }: ResultDis
               <h3 id="job-panel-title">{status === "queued" ? "Preparing your track" : STEPS.find((step) => step.id === status)?.title || "Working on your track"}</h3>
               <p className="progress-description">{status === "queued" ? "Waiting to begin processing…" : `Step ${activeStepNumber} of ${STEPS.length} · ${STEPS.find((step) => step.id === status)?.description || "Processing your audio"}`}</p>
             </div>
-            <strong className="progress-percentage">{progressPercent === null ? "Working" : `${progressPercent}%`}</strong>
+            <strong
+              className={`progress-percentage${progressPercent === null ? " progress-indeterminate-symbol" : ""}`}
+              aria-label={progressPercent === null ? "Separating stems" : undefined}
+            >
+              {progressPercent === null ? "⟳" : `${progressPercent}%`}
+            </strong>
           </div>
           <div
             className={`progress-track${progressPercent === null ? " is-indeterminate" : ""}`}
