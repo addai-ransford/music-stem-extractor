@@ -99,14 +99,17 @@ DEPLOY_ARGS=(
   --update-env-vars "PYTHONUNBUFFERED=1,DATA_DIR=/tmp/data"
 )
 
-# If a local cookie file exists, securely upload it to Secret Manager and mount
-# it at runtime. The cookie contents never enter the image, env vars, or logs.
+# Mount the existing cookie secret at runtime. Only initialize it from the local
+# file when the Secret Manager secret does not exist yet; regular code deploys
+# must not create new cookie versions.
 if [[ -f "${COOKIE_FILE}" ]]; then
-  echo "Configuring YouTube cookies from ${COOKIE_FILE}..."
   if ! gcloud secrets describe "${SECRET_NAME}" --project "${PROJECT_ID}" >/dev/null 2>&1; then
+    echo "Creating YouTube cookie secret from ${COOKIE_FILE}..."
     gcloud secrets create "${SECRET_NAME}" --replication-policy=automatic --project "${PROJECT_ID}"
+    gcloud secrets versions add "${SECRET_NAME}" --data-file="${COOKIE_FILE}" --project "${PROJECT_ID}" >/dev/null
+  else
+    echo "Using existing Secret Manager secret: ${SECRET_NAME} (cookie file unchanged)"
   fi
-  gcloud secrets versions add "${SECRET_NAME}" --data-file="${COOKIE_FILE}" --project "${PROJECT_ID}" >/dev/null
 
   PROJECT_NUMBER="$(gcloud projects describe "${PROJECT_ID}" --format='value(projectNumber)')"
   RUNTIME_SA="$(gcloud run services describe "${SERVICE}" --project "${PROJECT_ID}" --region "${REGION}" --format='value(spec.template.spec.serviceAccountName)' 2>/dev/null || true)"
