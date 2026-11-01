@@ -8,6 +8,7 @@ RUN npm run build
 
 # Python 3.10 is required by the pinned Spleeter/TensorFlow stack.
 FROM python:3.10-slim-bookworm AS runtime
+ARG TARGETARCH
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
@@ -21,7 +22,12 @@ WORKDIR /app
 COPY backend/requirements.txt /app/backend/requirements.txt
 RUN pip install --upgrade pip && \
     pip install -r /app/backend/requirements.txt && \
-    pip install tensorflow-cpu==2.12.0 spleeter==2.4.2 && \
+    if [ "$TARGETARCH" = "arm64" ]; then \
+      pip install tensorflow==2.12.1; \
+    else \
+      pip install tensorflow-cpu==2.12.0; \
+    fi && \
+    pip install spleeter==2.4.2 && \
     pip install --upgrade 'typing_extensions>=4.15.0,<5' && \
     python -c "from typing_extensions import Sentinel; import fastapi; print('FastAPI dependency check passed')"
 COPY backend/ /app/backend/
