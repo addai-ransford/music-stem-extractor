@@ -2,12 +2,22 @@
 # Run FastAPI backend and React Vite frontend.
 set -e
 
+ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
 APP_MODULE="${APP_MODULE:-backend.mse.api.api:app}"
 BACKEND_PORT="${BACKEND_PORT:-8000}"
 FRONTEND_DIR="${FRONTEND_DIR:-frontend}"
 FRONTEND_PORT="${FRONTEND_PORT:-3000}"
 DATA_DIR="${DATA_DIR:-data}"
 HOST="${HOST:-0.0.0.0}"
+VENV_DIR="$ROOT_DIR/.venv"
+
+if [ -f "$VENV_DIR/bin/activate" ]; then
+    # Use the project virtualenv so backend dependencies resolve from the
+    # same environment used to install them.
+    . "$VENV_DIR/bin/activate"
+else
+    echo "Warning: project virtualenv not found at $VENV_DIR; using current shell environment." >&2
+fi
 
 echo "Backend APP_MODULE=$APP_MODULE, PORT=$BACKEND_PORT, DATA_DIR=$DATA_DIR"
 echo "Frontend DIR=$FRONTEND_DIR, PORT=$FRONTEND_PORT"
@@ -48,7 +58,7 @@ build_frontend() {
 
 start_backend() {
     echo "Starting FastAPI backend..."
-    uvicorn "$APP_MODULE" --reload --host "$HOST" --port "$BACKEND_PORT"
+    python -m uvicorn "$APP_MODULE" --reload --host "$HOST" --port "$BACKEND_PORT"
 }
 
 main() {
